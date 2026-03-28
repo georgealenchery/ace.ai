@@ -1,73 +1,101 @@
-// TODO 1: Initialize OpenAI client once OPENAI_API_KEY is in .env
+// TODO: Initialize OpenAI client once OPENAI_API_KEY is in .env
 // import OpenAI from "openai";
-// const openai = new OpenAI(); // reads OPENAI_API_KEY from process.env automatically
+// const openai = new OpenAI();
 
-import { FOLLOWUP_PROMPT } from "../prompts/followup";
-import { EVALUATION_PROMPT } from "../prompts/evaluation";
+import { FOLLOWUP_PROMPT, buildFollowUpPrompt } from "../prompts/followUp";
+import { EVALUATION_PROMPT, buildEvaluationPrompt } from "../prompts/evaluation";
+import { buildBehavioralPrompt } from "../prompts/behavioral";
+import { buildTechnicalPrompt } from "../prompts/technical";
 import { formatTranscript } from "../utils/formatter";
+import type { Message, InterviewConfig, EvaluationResult } from "../types/interview";
 
-type Message = { role: string; content: string };
+/**
+ * Generate the opening question for an interview session.
+ * TODO: Wire up real OpenAI call
+ */
+export async function generateFirstQuestion(config: InterviewConfig): Promise<string> {
+  const { role, questionType, difficulty, experienceLevel } = config;
 
-// TODO 2: Add a generateFirstQuestion() function that takes interview config
-// and returns a role-specific opening question.
-// export async function generateFirstQuestion(config: InterviewConfig): Promise<string> {
-//   const prompt = buildFirstQuestionPrompt(config); // inject role, difficulty into prompt
-//   const res = await openai.chat.completions.create({
-//     model: "gpt-4o-mini",
-//     messages: [{ role: "system", content: prompt }],
-//   });
-//   return res.choices[0]?.message.content ?? "";
-// }
+  // TODO: Uncomment once OpenAI client is initialized
+  // const prompt =
+  //   questionType === "behavioral"
+  //     ? buildBehavioralPrompt(role, experienceLevel)
+  //     : buildTechnicalPrompt(role, difficulty, experienceLevel);
+  // const res = await openai.chat.completions.create({
+  //   model: "gpt-4o-mini",
+  //   messages: [{ role: "system", content: prompt }],
+  // });
+  // return res.choices[0]?.message.content ?? "";
 
-// TODO 3: Wire up real OpenAI call for follow-up question generation
-export async function generateFollowUp(messages: Message[]): Promise<string> {
-  // TODO 3a: Uncomment below — formatTranscript is already implemented and ready
+  // Suppress unused-var warnings for imported builders used in TODO above
+  void buildBehavioralPrompt;
+  void buildTechnicalPrompt;
+
+  console.log("generateFirstQuestion called:", { role, questionType, difficulty, experienceLevel });
+  return `placeholder opening question for ${role} (${questionType})`;
+}
+
+/**
+ * Generate a follow-up question based on conversation history.
+ * TODO: Wire up real OpenAI call
+ */
+export async function generateFollowUp(
+  messages: Message[],
+  config: InterviewConfig,
+): Promise<string> {
+  // TODO: Uncomment once OpenAI client is initialized
+  // const prompt = buildFollowUpPrompt(config.role, config.difficulty);
   // const transcript = formatTranscript(messages);
   // const res = await openai.chat.completions.create({
   //   model: "gpt-4o-mini",
   //   messages: [
-  //     { role: "system", content: FOLLOWUP_PROMPT },
+  //     { role: "system", content: prompt },
   //     { role: "user", content: transcript },
   //   ],
   // });
   // return res.choices[0]?.message.content ?? "";
-  console.log("generateFollowUp called with", messages.length, "messages");
+
+  void FOLLOWUP_PROMPT;
+  void buildFollowUpPrompt;
+  void formatTranscript;
+
+  console.log("generateFollowUp called with", messages.length, "messages for", config.role);
   return "placeholder follow-up question";
 }
 
-// TODO 4: Wire up real OpenAI call for evaluation.
-// Return type needs to expand from number → FeedbackResult to match AnalyticsDashboard.
-// type FeedbackResult = {
-//   score: number;
-//   communication: number;
-//   technicalAccuracy: number;
-//   problemSolving: number;
-//   strengths: string[];
-//   improvements: string[];
-//   nextSteps: string[];
-// };
-export async function evaluate(messages: Message[]): Promise<number> {
-  // TODO 4a: Ask OpenAI to return JSON matching FeedbackResult shape above
+/**
+ * Evaluate the full interview transcript and return structured feedback.
+ * TODO: Wire up real OpenAI call
+ */
+export async function evaluateInterview(
+  messages: Message[],
+  config: InterviewConfig,
+): Promise<EvaluationResult> {
+  // TODO: Uncomment once OpenAI client is initialized
+  // const prompt = buildEvaluationPrompt(config.role, config.questionType);
   // const transcript = formatTranscript(messages);
   // const res = await openai.chat.completions.create({
   //   model: "gpt-4o-mini",
   //   response_format: { type: "json_object" },
   //   messages: [
-  //     { role: "system", content: EVALUATION_PROMPT },
+  //     { role: "system", content: prompt },
   //     { role: "user", content: transcript },
   //   ],
   // });
-  // return JSON.parse(res.choices[0]?.message.content ?? "{}") as FeedbackResult;
-  console.log("evaluate called with", messages.length, "messages");
-  return 80;
-}
+  // return JSON.parse(res.choices[0]?.message.content ?? "{}") as EvaluationResult;
 
-// TODO 5: Add transcribeAudio() for Whisper STT once multer is set up in routes
-// export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
-//   const file = new File([audioBuffer], "audio.webm", { type: "audio/webm" });
-//   const res = await openai.audio.transcriptions.create({
-//     model: "whisper-1",
-//     file,
-//   });
-//   return res.text;
-// }
+  void EVALUATION_PROMPT;
+  void buildEvaluationPrompt;
+  void formatTranscript;
+
+  console.log("evaluateInterview called with", messages.length, "messages for", config.role);
+  return {
+    score: 80,
+    communication: 75,
+    technicalAccuracy: 82,
+    problemSolving: 78,
+    strengths: ["Clear communication", "Good problem breakdown"],
+    improvements: ["Could discuss edge cases more", "Time complexity analysis"],
+    nextSteps: ["Practice system design", "Review data structures"],
+  };
+}

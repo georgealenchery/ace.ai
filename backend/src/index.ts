@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import interviewRoutes from "./routes/interview";
+import transcribeRoutes from "./routes/transcribe";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/api", interviewRoutes);
+app.use("/api/transcribe", transcribeRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

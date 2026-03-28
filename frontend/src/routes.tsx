@@ -5,6 +5,7 @@ import { RoleSelection } from "./components/RoleSelection";
 import { LiveInterview } from "./components/LiveInterview";
 import { AnalyticsDashboard } from "./components/AnalyticsDashboard";
 import { DashboardDemo } from "./components/DashboardDemo";
+import { TechnicalInterviewLayout } from "./components/TechnicalInterview/TechnicalInterviewLayout";
 
 export const router = createBrowserRouter([
   {
@@ -24,8 +25,14 @@ export const router = createBrowserRouter([
     Component: SetupDashboard,
   },
   {
+    // Behavioral interview (unchanged)
     path: "/interview",
     Component: LiveInterview,
+  },
+  {
+    // Technical + Hybrid interview
+    path: "/technical-interview",
+    Component: TechnicalInterviewLayout,
   },
   {
     path: "/analytics",

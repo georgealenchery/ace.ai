@@ -232,7 +232,20 @@ export function SetupDashboard() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate("/interview")}
+              onClick={() => {
+                const isTechnical = questionType === "technical" || questionType === "hybrid";
+                const route = isTechnical ? "/technical-interview" : "/interview";
+                navigate(route, {
+                  state: {
+                    role,
+                    questionType,
+                    difficulty: questionDifficulty[0],
+                    strictness: interviewerStrictness[0],
+                    experienceLevel: experienceLevel[0],
+                    interviewer: interviewerAvatars[selectedInterviewer]!.name,
+                  },
+                });
+              }}
               className="w-full px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
             >
               Start Interview
