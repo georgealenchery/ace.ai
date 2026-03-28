@@ -33,8 +33,7 @@ ElevenLabs (voice, text-to-speech)
 OpenAI (evaluation and feedback)
 
 Setup Instructions
-
-1. Clone the repository
+Clone the repository
 
 git clone https://github.com/YOUR_USERNAME/ai-interviewer.git
 cd ai-interviewer
