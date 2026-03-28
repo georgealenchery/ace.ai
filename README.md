@@ -2,7 +2,7 @@ Welcome to Ace.AI!
 
 “Ace” your interviews with an AI-powered voice simulation.
 
-Ace.AI is what you wish you had when preparing for interviews, both technical and behavioral. It helps users practice interviews in a realistic, conversational setting. Using AI for voice interaction and intelligent feedback, Ace.AI simulates realistic pressures encountered in interviews, and evaluates users on their performance with actionable insights.
+Ace.AI is the tool you wish you had when preparing for interviews, both technical and behavioral. It helps users practice interviews in a realistic, conversational setting. Using AI for voice interaction and intelligent feedback, Ace.AI simulates realistic pressures encountered in interviews, and evaluates users on their performance with actionable insights.
 
 --Features--
 Voice Based Interviews: Practice interviews using real-time AI voice interaction powered by ElevenLabs.
@@ -31,15 +31,6 @@ OpenAI API
 APIs
 ElevenLabs (voice, text-to-speech)
 OpenAI (evaluation and feedback)
-
-
-
-
-Project Structure
-ai-interviewer/
-├── frontend/ # Next.js frontend (UI + voice interaction)
-├── backend/ # Express backend (evaluation + scoring)
-└── README.md
 
 Setup Instructions
 
