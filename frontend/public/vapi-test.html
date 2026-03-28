@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vapi Voice Debug</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 24px; }
+    h1 { margin-bottom: 16px; color: #fff; }
+    .controls { display: flex; gap: 12px; margin-bottom: 20px; }
+    button {
+      padding: 12px 24px; font-size: 16px; font-family: monospace; cursor: pointer;
+      border: none; border-radius: 6px; font-weight: bold;
+    }
+    #startBtn { background: #22c55e; color: #000; }
+    #startBtn:disabled { background: #555; color: #999; cursor: not-allowed; }
+    #stopBtn { background: #ef4444; color: #fff; }
+    #stopBtn:disabled { background: #555; color: #999; cursor: not-allowed; }
+    #status {
+      padding: 12px; margin-bottom: 16px; border-radius: 6px;
+      font-size: 18px; font-weight: bold; background: #2a2a4a;
+    }
+    #error {
+      padding: 12px; margin-bottom: 16px; border-radius: 6px;
+      background: #4a1a1a; border: 2px solid #ef4444; color: #ff6b6b;
+      display: none; white-space: pre-wrap;
+    }
+    #log {
+      background: #0d0d1a; border: 1px solid #333; border-radius: 6px;
+      padding: 12px; height: 500px; overflow-y: auto; font-size: 13px;
+      line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+    }
+    .log-event { color: #60a5fa; }
+    .log-error { color: #f87171; }
+    .log-info { color: #a78bfa; }
+    .log-data { color: #4ade80; }
+  </style>
+</head>
+<body>
+  <h1>Vapi Voice Debug Page</h1>
+
+  <div id="status">Status: idle</div>
+  <div id="error"></div>
+
+  <div class="controls">
+    <button id="startBtn" onclick="startCall()">Start Call</button>
+    <button id="stopBtn" onclick="stopCall()" disabled>Stop Call</button>
+  </div>
+
+  <div id="log"></div>
+
+  <script src="https://unpkg.com/@vapi-ai/web@2.5.2/dist/vapi.js"></script>
+  <script>
+    const PUBLIC_KEY = "849e55d7-27e0-4a6c-8af7-837123d18d91";
+    const ASSISTANT_ID = "4d662356-ee92-4a36-94d6-5f030f000a0b";
+
+    let vapiInstance = null;
+
+    const logEl = document.getElementById("log");
+    const statusEl = document.getElementById("status");
+    const errorEl = document.getElementById("error");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+
+    function log(msg, cls = "log-info") {
+      const ts = new Date().toISOString().split("T")[1].replace("Z", "");
+      const line = document.createElement("div");
+      line.className = cls;
+      line.textContent = `[${ts}] ${msg}`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(msg);
+    }
+
+    function setStatus(text) {
+      statusEl.textContent = "Status: " + text;
+      log("STATUS → " + text, "log-event");
+    }
+
+    function showError(err) {
+      const msg = typeof err === "object" ? JSON.stringify(err, null, 2) : String(err);
+      errorEl.style.display = "block";
+      errorEl.textContent = msg;
+      log("ERROR: " + msg, "log-error");
+    }
+
+    async function startCall() {
+      log("=== START CALL CLICKED ===", "log-event");
+      startBtn.disabled = true;
+      errorEl.style.display = "none";
+
+      try {
+        // Step 1: Resolve Vapi constructor
+        log("window.Vapi = " + typeof window.Vapi);
+        log("Keys on window.Vapi: " + (window.Vapi ? Object.keys(window.Vapi).join(", ") : "N/A"));
+
+        const VapiClass = window.Vapi?.default || window.Vapi;
+        log("Resolved VapiClass = " + typeof VapiClass);
+
+        if (typeof VapiClass !== "function") {
+          throw new Error("Vapi constructor not found. window.Vapi = " + JSON.stringify(window.Vapi));
+        }
+
+        // Step 2: Create instance
+        log("Creating Vapi instance with public key: " + PUBLIC_KEY.slice(0, 8) + "...");
+        vapiInstance = new VapiClass(PUBLIC_KEY);
+        log("Vapi instance created: " + typeof vapiInstance);
+        log("Instance methods: " + Object.getOwnPropertyNames(Object.getPrototypeOf(vapiInstance)).join(", "), "log-data");
+
+        // Step 3: Register ALL event listeners
+        vapiInstance.on("call-start", () => {
+          setStatus("active (call started)");
+          stopBtn.disabled = false;
+        });
+
+        vapiInstance.on("call-end", () => {
+          setStatus("ended");
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+        });
+
+        vapiInstance.on("speech-start", () => {
+          setStatus("assistant speaking");
+          log("SPEECH-START: assistant is speaking audio", "log-event");
+        });
+
+        vapiInstance.on("speech-end", () => {
+          setStatus("listening");
+          log("SPEECH-END: assistant stopped speaking", "log-event");
+        });
+
+        vapiInstance.on("volume-level", (vol) => {
+          // Throttle: only log every ~2 seconds worth
+          if (Math.random() < 0.05) log("VOLUME: " + vol.toFixed(3), "log-data");
+        });
+
+        vapiInstance.on("message", (msg) => {
+          log("MESSAGE: " + JSON.stringify(msg), "log-data");
+        });
+
+        vapiInstance.on("error", (err) => {
+          showError(err);
+        });
+
+        // Step 4: Unlock AudioContext
+        log("Unlocking AudioContext...");
+        const audioCtx = new AudioContext();
+        await audioCtx.resume();
+        log("AudioContext state: " + audioCtx.state, "log-data");
+
+        // Step 5: Start the call
+        setStatus("connecting...");
+        log("Calling vapi.start('" + ASSISTANT_ID.slice(0, 8) + "...')");
+        const call = await vapiInstance.start(ASSISTANT_ID);
+        log("vapi.start() resolved: " + JSON.stringify(call, null, 2), "log-data");
+
+        stopBtn.disabled = false;
+
+      } catch (err) {
+        showError(err);
+        setStatus("error");
+        startBtn.disabled = false;
+      }
+    }
+
+    function stopCall() {
+      log("=== STOP CALL CLICKED ===", "log-event");
+      if (vapiInstance) {
+        vapiInstance.stop();
+        log("vapi.stop() called");
+      }
+      setStatus("stopped");
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    }
+
+    // Log initial state
+    log("Page loaded. Vapi SDK should be available at window.Vapi.");
+    log("window.Vapi = " + typeof window.Vapi);
+  </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { vapi } from "../lib/vapi";
 
 interface VapiTranscriptMessage {
@@ -26,12 +26,8 @@ export function useVapiInterview() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
-  const listenersAttached = useRef(false);
 
   useEffect(() => {
-    if (listenersAttached.current) return;
-    listenersAttached.current = true;
-
     const onCallStart = () => {
       console.log("Call started");
       setStatus("active");
@@ -82,25 +78,34 @@ export function useVapiInterview() {
     vapi.on("error", onError);
 
     return () => {
-      vapi.removeAllListeners();
-      listenersAttached.current = false;
+      vapi.removeListener("call-start", onCallStart);
+      vapi.removeListener("call-end", onCallEnd);
+      vapi.removeListener("speech-start", onSpeechStart);
+      vapi.removeListener("speech-end", onSpeechEnd);
+      vapi.removeListener("message", onMessage);
+      vapi.removeListener("error", onError);
     };
   }, []);
 
   const start = async () => {
-    setStatus("connecting");
-    setMessages([]);
+    try {
+      console.log("START CLICKED");
+      console.log("Assistant ID:", import.meta.env.VITE_VAPI_ASSISTANT_ID);
+      setStatus("connecting");
+      setMessages([]);
 
-    // Unlock browser audio context — must happen inside a user-gesture handler
-    const AudioContextConstructor =
-      window.AudioContext ||
-      (window as unknown as Record<string, typeof AudioContext>)
-        .webkitAudioContext;
-    const audioContext = new AudioContextConstructor();
-    await audioContext.resume();
+      // Unlock audio output (must happen in user-gesture handler)
+      const audioContext = new AudioContext();
+      await audioContext.resume();
+      console.log("AudioContext state:", audioContext.state);
 
-    // Start Vapi AFTER audio is unlocked
-    vapi.start(import.meta.env.VITE_VAPI_ASSISTANT_ID);
+      // Start Vapi after audio is unlocked
+      const call = await vapi.start(import.meta.env.VITE_VAPI_ASSISTANT_ID);
+      console.log("Vapi call object:", call);
+    } catch (err) {
+      console.error("Failed to start Vapi call:", err);
+      setStatus("idle");
+    }
   };
 
   const stop = () => {

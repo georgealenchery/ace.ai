@@ -234,7 +234,7 @@ export function SetupDashboard() {
               whileTap={{ scale: 0.98 }}
               onClick={() => {
                 const isTechnical = questionType === "technical" || questionType === "hybrid";
-                const route = isTechnical ? "/technical-interview" : "/interview";
+                const route = isTechnical ? "/technical-interview" : "/interview/voice";
                 navigate(route, {
                   state: {
                     role,
