@@ -1,0 +1,50 @@
+[
+  {
+    "id": "2084542c-125b-46a9-97b5-fd04a9032d51",
+    "date": "2026-03-29T03:44:36.249Z",
+    "role": "frontend",
+    "questionType": "behavioral",
+    "config": {
+      "role": "frontend",
+      "difficulty": 56,
+      "experienceLevel": 1,
+      "strictness": 44,
+      "questionType": "behavioral"
+    },
+    "result": {
+      "score": 65,
+      "communication": 70,
+      "technicalAccuracy": 60,
+      "problemSolving": 65,
+      "strengths": [
+        "Provides relevant experience: The candidate shared their experience managing state for a theme across a website.",
+        "Willingness to clarify: The candidate asked for confirmation about using React context when initially confused.",
+        "Maintains a positive demeanor: The candidate showed confidence and willingness to engage."
+      ],
+      "improvements": [
+        "Lacks detail in explanation: The candidate could provide more specifics about the implementation or challenges faced while managing state.",
+        "Unclear technical terms: Phrasing like 'defined it in the main part of the code base' needs more clarity for better understanding.",
+        "Struggled with follow-up questions: The candidate appeared uncertain when asked about the specific tools used for state management."
+      ],
+      "nextSteps": [
+        "Study state management in React, particularly React context API, and how to effectively communicate its usage.",
+        "Practice providing more detailed explanations in technical discussions, focusing on the 'how' and 'why' of implementations.",
+        "Engage in mock interviews to build confidence and clarity in answering follow-up questions."
+      ],
+      "questionBreakdown": [
+        {
+          "question": "Tell me about a time when you had to manage state that was shared across different components. What was the situation, and how did you approach it?",
+          "candidateAnswer": "The candidate discussed managing theme state for light and dark modes across a website.",
+          "score": 70,
+          "feedback": "This answer highlighted relevant experience, but it could have benefited from more detail on the challenges and how they were addressed."
+        },
+        {
+          "question": "Can you tell me how you decided where to store your theme state? Did you use React context? Can you walk me through how you set up the theme state?",
+          "candidateAnswer": "The candidate stated they used React state, defined it in the main part of the code base, and imported it into specific files.",
+          "score": 60,
+          "feedback": "The answer lacked clarity on whether they used React context; they should specify the approach to demonstrate a deeper understanding."
+        }
+      ]
+    }
+  }
+]

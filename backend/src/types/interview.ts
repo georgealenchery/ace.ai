@@ -46,3 +46,43 @@ export type ApiErrorResponse = {
   error: string;
   details?: string;
 };
+
+export type VapiTranscriptEntry = {
+  role: "assistant" | "user";
+  text: string;
+};
+
+export type VapiInterviewConfig = {
+  role: string;
+  difficulty: number;
+  experienceLevel: number;
+  strictness: number;
+  questionType: "behavioral" | "technical" | "hybrid";
+};
+
+export type QuestionBreakdown = {
+  question: string;
+  candidateAnswer: string;
+  score: number;
+  feedback: string;
+};
+
+export type VapiAnalysisResult = {
+  score: number;
+  communication: number;
+  technicalAccuracy: number;
+  problemSolving: number;
+  strengths: string[];
+  improvements: string[];
+  nextSteps: string[];
+  questionBreakdown: QuestionBreakdown[];
+};
+
+export type SavedInterview = {
+  id: string;
+  date: string;
+  role: string;
+  questionType: string;
+  config: VapiInterviewConfig;
+  result: VapiAnalysisResult;
+};

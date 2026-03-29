@@ -10,7 +10,9 @@
       "Bash(npm config:*)",
       "Bash(npx tsc:*)",
       "Bash(grep -h ^import C:/Users/jackb/Documents/ai-interviewer/app/components/ui/*.tsx C:/Users/jackb/Documents/ai-interviewer/app/components/*.tsx C:/Users/jackb/Documents/ai-interviewer/app/App.tsx C:/Users/jackb/Documents/ai-interviewer/app/routes.tsx)",
-      "Bash(find /c/Users/jackb/Documents/ai-interviewer -type f -name .env* -o -name *.env)"
+      "Bash(find /c/Users/jackb/Documents/ai-interviewer -type f -name .env* -o -name *.env)",
+      "Bash(git fetch:*)",
+      "Bash(git push:*)"
     ]
   }
 }

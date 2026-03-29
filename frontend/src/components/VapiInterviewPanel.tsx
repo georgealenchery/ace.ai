@@ -2,24 +2,55 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion } from "motion/react";
 import { Mic, MicOff, X } from "lucide-react";
-import { useVapiInterview } from "../hooks/useVapiInterview";
+import {
+  useVapiInterview,
+  getDifficultyLabel,
+  getExperienceLabel,
+  getStrictnessLabel,
+} from "../hooks/useVapiInterview";
+import type { VapiInterviewConfig } from "../hooks/useVapiInterview";
 
 export function VapiInterviewPanel() {
   const navigate = useNavigate();
   const location = useLocation();
   const [time, setTime] = useState(0);
 
-  const { status, isSpeaking, isListening, messages, start, stop } =
-    useVapiInterview();
+  const {
+    status,
+    isSpeaking,
+    isListening,
+    messages,
+    isAnalyzing,
+    callEndedNaturally,
+    start,
+    stop,
+    evaluateTranscript,
+  } = useVapiInterview();
 
   const state = location.state as {
     role?: string;
+    questionType?: string;
+    difficulty?: number;
+    strictness?: number;
+    experienceLevel?: number;
     interviewer?: string;
   } | null;
 
   const interviewer = state?.interviewer ?? "Cassidy";
-  const role = state?.role ?? "backend";
+  const role = state?.role ?? "fullstack";
+  const questionType = (state?.questionType ?? "behavioral") as VapiInterviewConfig["questionType"];
+  const difficulty = state?.difficulty ?? 50;
+  const experienceLevel = state?.experienceLevel ?? 50;
+  const strictness = state?.strictness ?? 50;
   const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
+
+  const interviewConfig: VapiInterviewConfig = {
+    role,
+    difficulty,
+    experienceLevel,
+    strictness,
+    questionType,
+  };
 
   // Timer — runs while call is active
   useEffect(() => {
@@ -34,24 +65,44 @@ export function VapiInterviewPanel() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleEnd = () => {
-    stop();
-    navigate("/analytics", { state: { result: null } });
+  const analyzeAndNavigate = async () => {
+    const result = await evaluateTranscript(messages, interviewConfig);
+    navigate("/analytics", { state: { result, config: interviewConfig } });
   };
 
-  const statusLabel = isSpeaking
-    ? "AI is speaking…"
-    : isListening
-      ? "Listening to you…"
-      : status === "connecting"
-        ? "Connecting…"
-        : status === "ended"
-          ? "Interview ended"
-          : "Ready to start";
+  const handleEnd = () => {
+    stop();
+    if (messages.length >= 2) {
+      analyzeAndNavigate();
+    } else {
+      navigate("/analytics", { state: { result: null } });
+    }
+  };
 
-  const statusColor = status === "active"
-    ? isSpeaking ? "#f59e0b" : "#22c55e"
-    : status === "connecting" ? "#3b82f6" : "#9ca3af";
+  // When Vapi ends the call naturally, auto-evaluate
+  useEffect(() => {
+    if (callEndedNaturally && messages.length >= 2 && !isAnalyzing) {
+      analyzeAndNavigate();
+    }
+  }, [callEndedNaturally]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const statusLabel = isAnalyzing
+    ? "Analyzing your interview…"
+    : isSpeaking
+      ? "AI is speaking…"
+      : isListening
+        ? "Listening to you…"
+        : status === "connecting"
+          ? "Connecting…"
+          : status === "ended"
+            ? "Interview ended"
+            : "Ready to start";
+
+  const statusColor = isAnalyzing
+    ? "#a855f7"
+    : status === "active"
+      ? isSpeaking ? "#f59e0b" : "#22c55e"
+      : status === "connecting" ? "#3b82f6" : "#9ca3af";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-6">
@@ -63,6 +114,15 @@ export function VapiInterviewPanel() {
             <p className="text-gray-400">Voice Assessment</p>
           </div>
           <div className="text-3xl font-mono">{formatTime(time)}</div>
+        </div>
+
+        {/* Settings Summary */}
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+          <span className="px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300">{roleLabel}</span>
+          <span className="px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-300">{questionType.charAt(0).toUpperCase() + questionType.slice(1)}</span>
+          <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300">{getDifficultyLabel(difficulty)} Difficulty</span>
+          <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-300">{getExperienceLabel(experienceLevel)}</span>
+          <span className="px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-300">{getStrictnessLabel(strictness)} Strictness</span>
         </div>
 
         {/* Status Bar */}
@@ -172,11 +232,16 @@ export function VapiInterviewPanel() {
 
         {/* Controls */}
         <div className="flex justify-center gap-4">
-          {status === "idle" || status === "ended" ? (
+          {isAnalyzing ? (
+            <div className="px-8 py-4 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 flex items-center gap-3">
+              <div className="w-5 h-5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+              <span>Analyzing your interview…</span>
+            </div>
+          ) : status === "idle" || status === "ended" ? (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={start}
+              onClick={() => start(interviewConfig)}
               className="px-8 py-4 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
             >
               <Mic className="w-5 h-5" />
