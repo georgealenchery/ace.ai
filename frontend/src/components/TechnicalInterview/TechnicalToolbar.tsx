@@ -7,7 +7,6 @@ type TechnicalToolbarProps = {
   questionNumber: number;
   totalQuestions: number;
   time: number;
-  mode: "technical" | "hybrid";
   onEnd: () => void;
 };
 
@@ -17,7 +16,6 @@ export function TechnicalToolbar({
   questionNumber,
   totalQuestions,
   time,
-  mode,
   onEnd,
 }: TechnicalToolbarProps) {
   const mins = Math.floor(time / 60).toString().padStart(2, "0");
@@ -29,13 +27,8 @@ export function TechnicalToolbar({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-white">
-              {mode === "hybrid" ? "Hybrid Interview" : "Technical Interview"}
+              Technical Interview
             </h1>
-            {mode === "hybrid" && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300">
-                Technical Round
-              </span>
-            )}
           </div>
           <p className="text-sm text-gray-400">
             {role} · {difficulty} · Q{questionNumber}/{totalQuestions}

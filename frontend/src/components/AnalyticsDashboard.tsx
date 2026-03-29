@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { TrendingUp, TrendingDown, MessageSquare, Code, Lightbulb, ArrowLeft } from "lucide-react";
+import { TrendingUp, TrendingDown, MessageSquare, Code, Lightbulb, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { getInterviewHistory } from "../services/api";
 import type { VapiAnalysisResult, SavedInterview } from "../services/api";
 
@@ -17,6 +17,7 @@ export function AnalyticsDashboard() {
 
   const [history, setHistory] = useState<SavedInterview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     getInterviewHistory()
@@ -254,19 +255,117 @@ export function AnalyticsDashboard() {
             className="backdrop-blur-lg bg-white/40 rounded-2xl p-8 border border-white/50 shadow-xl"
           >
             <h3 className="font-semibold text-gray-900 mb-6">Past Interviews</h3>
-            <div className="space-y-4">
-              {pastInterviews.length === 0 ? (
+            <div className="space-y-3">
+              {history.length === 0 ? (
                 <p className="text-gray-500">No past interviews yet.</p>
               ) : (
-                pastInterviews.map((interview) => (
-                  <div key={interview.id} className="flex items-center justify-between p-4 bg-white/50 rounded-xl">
-                    <div>
-                      <p className="font-medium text-gray-900">{interview.role}</p>
-                      <p className="text-sm text-gray-600">{interview.date} &bull; {interview.type}</p>
+                history.map((entry) => {
+                  const isExpanded = expandedId === entry.id;
+                  const r = entry.result;
+                  return (
+                    <div key={entry.id} className="rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                        className="w-full flex items-center justify-between p-4 bg-white/50 hover:bg-white/70 transition-colors rounded-xl"
+                      >
+                        <div className="text-left">
+                          <p className="font-medium text-gray-900">
+                            {entry.role.charAt(0).toUpperCase() + entry.role.slice(1)}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} &bull; {entry.questionType.charAt(0).toUpperCase() + entry.questionType.slice(1)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl font-bold text-blue-600">{r.score}%</span>
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                          )}
+                        </div>
+                      </button>
+
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-4 pb-4 pt-2 space-y-4">
+                              {/* Metric bars */}
+                              <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">Communication</p>
+                                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${r.communication}%` }} />
+                                  </div>
+                                  <p className="text-xs font-semibold text-gray-700 mt-0.5">{r.communication}%</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">Technical</p>
+                                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-full bg-purple-500 rounded-full" style={{ width: `${r.technicalAccuracy}%` }} />
+                                  </div>
+                                  <p className="text-xs font-semibold text-gray-700 mt-0.5">{r.technicalAccuracy}%</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">Problem Solving</p>
+                                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-full bg-pink-500 rounded-full" style={{ width: `${r.problemSolving}%` }} />
+                                  </div>
+                                  <p className="text-xs font-semibold text-gray-700 mt-0.5">{r.problemSolving}%</p>
+                                </div>
+                              </div>
+
+                              {/* Strengths */}
+                              {r.strengths.length > 0 && (
+                                <div>
+                                  <h4 className="text-xs font-semibold text-green-700 mb-1">Strengths</h4>
+                                  <ul className="space-y-0.5 text-xs text-gray-600 ml-3">
+                                    {r.strengths.map((s, i) => <li key={i}>&bull; {s}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Improvements */}
+                              {r.improvements.length > 0 && (
+                                <div>
+                                  <h4 className="text-xs font-semibold text-orange-700 mb-1">Areas to Improve</h4>
+                                  <ul className="space-y-0.5 text-xs text-gray-600 ml-3">
+                                    {r.improvements.map((s, i) => <li key={i}>&bull; {s}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Question Breakdown */}
+                              {r.questionBreakdown.length > 0 && (
+                                <div>
+                                  <h4 className="text-xs font-semibold text-gray-700 mb-2">Question Breakdown</h4>
+                                  <div className="space-y-2">
+                                    {r.questionBreakdown.map((q, i) => (
+                                      <div key={i} className="bg-white/60 rounded-lg p-3">
+                                        <div className="flex items-start justify-between gap-2 mb-1">
+                                          <p className="text-xs font-medium text-gray-800">{q.question}</p>
+                                          <span className="text-xs font-bold text-blue-600 shrink-0">{q.score}%</span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mb-1">{q.candidateAnswer}</p>
+                                        <p className="text-xs text-gray-600 italic">{q.feedback}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-                    <div className="text-2xl font-bold text-blue-600">{interview.score}%</div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </motion.div>

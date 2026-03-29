@@ -11,7 +11,7 @@ export type InterviewState = {
   isLoading: boolean;
 };
 
-export type InterviewMode = "behavioral" | "technical" | "hybrid";
+export type InterviewMode = "behavioral" | "technical";
 
 export type InterviewConfig = {
   mode: InterviewMode;

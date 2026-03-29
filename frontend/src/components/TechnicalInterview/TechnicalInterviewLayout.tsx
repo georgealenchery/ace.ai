@@ -38,7 +38,7 @@ export function TechnicalInterviewLayout() {
   } | null;
 
   const role = state?.role ?? "frontend";
-  const mode = state?.questionType === "hybrid" ? "hybrid" : "technical";
+  const mode = "technical" as const;
   const difficultyValue = state?.difficulty ?? 50;
   const difficultyLabel = difficultyValue <= 30 ? "Easy" : difficultyValue <= 60 ? "Medium" : "Hard";
 
@@ -141,7 +141,7 @@ export function TechnicalInterviewLayout() {
         questionNumber={1}
         totalQuestions={1}
         time={time}
-        mode={mode === "hybrid" ? "hybrid" : "technical"}
+        mode="technical"
         onEnd={handleEnd}
       />
 

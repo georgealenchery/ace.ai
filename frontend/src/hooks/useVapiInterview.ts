@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { vapi } from "../lib/vapi";
 import { evaluateVapiInterview } from "../services/api";
 import type { VapiAnalysisResult } from "../services/api";
+import type { CreateAssistantDTO } from "@vapi-ai/web/dist/api";
 
 interface VapiTranscriptMessage {
   type: string;
@@ -28,7 +29,7 @@ export interface VapiInterviewConfig {
   difficulty: number;
   experienceLevel: number;
   strictness: number;
-  questionType: "behavioral" | "technical" | "hybrid";
+  questionType: "behavioral" | "technical";
 }
 
 const ROLE_TOPICS: Record<string, string> = {
@@ -112,12 +113,9 @@ Hold the candidate to a high bar. Point out when answers are incomplete. Say thi
     questionTypeInstructions = `You're doing a behavioral interview only.
 Ask STAR method questions about software engineering situations. For example, "Tell me about a time you had a technical disagreement with a teammate. How did you resolve it?" or "Describe a project where you had to learn a new technology quickly."
 Every question must tie back to technical work. Don't ask generic behavioral questions unrelated to engineering.`;
-  } else if (config.questionType === "technical") {
+  } else {
     questionTypeInstructions = `You're doing a technical interview only.
 Ask coding concepts, system design, debugging scenarios, and architecture questions. No behavioral questions at all. Dive straight into technical topics.`;
-  } else {
-    questionTypeInstructions = `You're doing a hybrid interview, behavioral first then technical.
-Start with two or three behavioral questions about engineering situations. Then transition to technical questions. When switching, say something like "Alright, let's shift to some technical questions." Then ask coding, system design, or architecture questions for the rest.`;
   }
 
   return `You're a senior ${roleLabel} engineering interviewer. Your name is the interviewer name the candidate sees on screen.
@@ -288,17 +286,20 @@ export function useVapiInterview() {
       console.log("System prompt length:", systemPrompt.length);
       console.log("First message:", firstMessage);
 
-      const call = await vapi.start({
+      const assistantConfig: CreateAssistantDTO = {
         model: {
           provider: "openai",
           model: "gpt-4.1",
           messages: [{ role: "system", content: systemPrompt }],
         },
-        voice: { provider: "vapi", voiceId: "Zac", speed: 0.9 },
+        voice: { provider: "vapi", voiceId: "Cole", speed: 0.9 },
         transcriber: { provider: "deepgram", model: "nova-3", language: "en" },
         firstMessage,
-        backgroundDenoisingEnabled: true,
-      } as any);
+        backgroundSpeechDenoisingPlan: {
+          smartDenoisingPlan: { enabled: true },
+        },
+      };
+      const call = await vapi.start(assistantConfig);
       console.log("Vapi call object:", call);
     } catch (err) {
       console.error("Failed to start Vapi call:", err);

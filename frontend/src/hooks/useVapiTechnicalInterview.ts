@@ -3,6 +3,7 @@ import { vapi } from "../lib/vapi";
 import { evaluateVapiInterview } from "../services/api";
 import type { VapiAnalysisResult } from "../services/api";
 import type { TranscriptMessage, CallStatus } from "./useVapiInterview";
+import type { CreateAssistantDTO } from "@vapi-ai/web/dist/api";
 
 interface VapiTranscriptMessage {
   type: string;
@@ -21,7 +22,7 @@ export interface VapiTechnicalConfig {
   difficulty: number;
   experienceLevel: number;
   strictness: number;
-  questionType: "behavioral" | "technical" | "hybrid";
+  questionType: "behavioral" | "technical";
   problemTitle: string;
   problemDescription: string;
 }
@@ -222,17 +223,20 @@ export function useVapiTechnicalInterview() {
       const firstMessage = buildFirstMessage(config);
       console.log("Technical system prompt length:", systemPrompt.length);
 
-      await vapi.start({
+      const assistantConfig: CreateAssistantDTO = {
         model: {
           provider: "openai",
           model: "gpt-4.1",
           messages: [{ role: "system", content: systemPrompt }],
         },
-        voice: { provider: "vapi", voiceId: "Zac", speed: 0.9 },
+        voice: { provider: "vapi", voiceId: "Cole", speed: 0.9 },
         transcriber: { provider: "deepgram", model: "nova-3", language: "en" },
         firstMessage,
-        backgroundDenoisingEnabled: true,
-      } as any);
+        backgroundSpeechDenoisingPlan: {
+          smartDenoisingPlan: { enabled: true },
+        },
+      };
+      await vapi.start(assistantConfig);
     } catch (err) {
       console.error("Failed to start Vapi technical call:", err);
       setStatus("idle");

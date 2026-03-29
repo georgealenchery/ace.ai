@@ -16,7 +16,7 @@ export function SetupDashboard() {
   const roleParam = searchParams.get("role") || "backend";
 
   const [role, setRole] = useState(roleParam);
-  const [questionType, setQuestionType] = useState("hybrid");
+  const [questionType, setQuestionType] = useState("behavioral");
   const [questionDifficulty, setQuestionDifficulty] = useState([50]);
   const [interviewerStrictness, setInterviewerStrictness] = useState([50]);
   const [experienceLevel, setExperienceLevel] = useState([2]);
@@ -69,7 +69,7 @@ export function SetupDashboard() {
                 Question Type
               </label>
               <div className="flex gap-2">
-                {["behavioral", "technical", "hybrid"].map((type) => (
+                {["behavioral", "technical"].map((type) => (
                   <button
                     key={type}
                     onClick={() => setQuestionType(type)}
@@ -233,7 +233,7 @@ export function SetupDashboard() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => {
-                const isTechnical = questionType === "technical" || questionType === "hybrid";
+                const isTechnical = questionType === "technical";
                 const route = isTechnical ? "/technical-interview" : "/interview/voice";
                 navigate(route, {
                   state: {

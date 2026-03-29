@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bell, ChevronDown, User, Settings, FileText, LogOut } from "lucide-react";
+import { Bell, ChevronDown, FileText, LogOut, Menu, X } from "lucide-react";
 import { useNavigate } from "react-router";
 import logo from "../assets/finallogoace.png";
 
@@ -16,6 +16,7 @@ export function DashboardNavbar({
   activeTab = "Dashboard",
 }: DashboardNavbarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -47,15 +48,15 @@ export function DashboardNavbar({
           <img
             src={logo}
             alt="ACE.AI logo"
-            className="w-[80px] md:w-[90px] h-auto object-contain"
-            style={{ transform: "scale(2.35)", transformOrigin: "left center" }}
+            className="h-auto w-[80px] object-contain"
+            style={{ transform: "scale(1.8)", transformOrigin: "left center" }}
           />
         </div>
 
         {/* Right side wrapper */}
-        <div className="ml-auto flex items-center gap-4 md:gap-6">
-          {/* Nav links */}
-          <div className="hidden md:flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-4 lg:gap-6">
+          {/* Nav links — hidden below lg */}
+          <div className="hidden lg:flex items-center gap-2">
             {navItems.map((item) => (
               <motion.button
                 key={item.label}
@@ -73,6 +74,20 @@ export function DashboardNavbar({
             ))}
           </div>
 
+          {/* Hamburger — visible below lg */}
+          <motion.button
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="rounded-xl p-2.5 transition-all hover:bg-white/50 lg:hidden"
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-5 w-5 text-gray-700" />
+            ) : (
+              <Menu className="h-5 w-5 text-gray-700" />
+            )}
+          </motion.button>
+
           {/* Notification bell */}
           <motion.button
             whileHover={{ scale: 1.08 }}
@@ -89,7 +104,7 @@ export function DashboardNavbar({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-3 rounded-xl py-2 pl-2 pr-3 transition-all hover:bg-white/50 md:pr-4"
+              className="flex items-center gap-3 rounded-xl py-2 pl-2 pr-3 transition-all hover:bg-white/50 lg:pr-4"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-sm font-semibold text-white shadow-sm">
                 {userInitials}
@@ -120,28 +135,6 @@ export function DashboardNavbar({
                     <button
                       onClick={() => {
                         setIsDropdownOpen(false);
-                        navigate("/profile");
-                      }}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-gray-700 transition-all hover:bg-blue-50/50"
-                    >
-                      <User className="h-4 w-4" />
-                      <span className="font-medium">View Profile</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsDropdownOpen(false);
-                        navigate("/settings");
-                      }}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-gray-700 transition-all hover:bg-blue-50/50"
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span className="font-medium">Settings</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsDropdownOpen(false);
                         navigate("/analytics");
                       }}
                       className="flex w-full items-center gap-3 px-4 py-3 text-gray-700 transition-all hover:bg-blue-50/50"
@@ -169,6 +162,39 @@ export function DashboardNavbar({
           </div>
         </div>
       </div>
+
+      {/* Mobile nav menu — visible below lg */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-t border-white/30 lg:hidden"
+          >
+            <div className="flex flex-col gap-1 px-6 py-3">
+              {navItems.map((item) => (
+                <motion.button
+                  key={item.label}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    navigate(item.path);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`rounded-xl px-4 py-2.5 text-left font-medium transition-all ${
+                    activeTab === item.label
+                      ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
+                      : "text-gray-700 hover:bg-white/50 hover:text-gray-900"
+                  }`}
+                >
+                  {item.label}
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }
