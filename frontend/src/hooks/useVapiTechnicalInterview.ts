@@ -229,7 +229,8 @@ export function useVapiTechnicalInterview() {
           model: "gpt-4.1",
           messages: [{ role: "system", content: systemPrompt }],
         },
-        voice: { provider: "vapi", voiceId: "Cole", speed: 0.9 },
+        // "Zac" is supported by Vapi but missing from the SDK type union
+        voice: { provider: "vapi", voiceId: "Zac", speed: 0.9 } as CreateAssistantDTO["voice"],
         transcriber: { provider: "deepgram", model: "nova-3", language: "en" },
         firstMessage,
         backgroundSpeechDenoisingPlan: {

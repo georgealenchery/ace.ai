@@ -30,13 +30,16 @@ function stripTypeAnnotations(tsCode: string): string {
   return code;
 }
 
-function executeJavaScript(code: string): OutputEntry[] {
+function executeJavaScript(
+  code: string,
+  testCases: TechnicalProblem["testCases"],
+): OutputEntry[] {
   const outputs: OutputEntry[] = [];
   const originalLog = console.log;
   const originalError = console.error;
   const originalWarn = console.warn;
 
-  // Override console methods to capture output
+  // Capture any console.log calls the user may have added
   console.log = (...args: unknown[]) => {
     outputs.push({
       type: "log",
@@ -57,24 +60,25 @@ function executeJavaScript(code: string): OutputEntry[] {
   };
 
   try {
-    // Use Function constructor to execute in a somewhat isolated scope
-    const fn = new Function(code);
-    const result = fn();
-    if (result !== undefined) {
-      outputs.push({
-        type: "result",
-        text: typeof result === "object" ? JSON.stringify(result, null, 2) : String(result),
-      });
+    // Run the user's code, then auto-invoke the function with each example input
+    for (const tc of testCases) {
+      try {
+        const runCode = `${code}\nreturn ${tc.call};`;
+        const fn = new Function(runCode);
+        const result = fn();
+        const formatted = typeof result === "object" ? JSON.stringify(result) : String(result);
+        outputs.push({
+          type: "result",
+          text: `${tc.call}  →  ${formatted}`,
+        });
+      } catch (err: unknown) {
+        const error = err as Error;
+        outputs.push({
+          type: "error",
+          text: `${tc.call}  →  ${error.name}: ${error.message}`,
+        });
+      }
     }
-    if (outputs.length === 0) {
-      outputs.push({ type: "log", text: "(No output. Add console.log() to see results.)" });
-    }
-  } catch (err: unknown) {
-    const error = err as Error;
-    outputs.push({
-      type: "error",
-      text: `${error.name}: ${error.message}${error.stack ? "\n" + error.stack.split("\n").slice(1, 4).join("\n") : ""}`,
-    });
   } finally {
     console.log = originalLog;
     console.error = originalError;
@@ -132,9 +136,10 @@ function runTestCases(
 
 type TechnicalCodeEditorProps = {
   problem: TechnicalProblem;
+  onAllTestsPass?: () => void;
 };
 
-export function TechnicalCodeEditor({ problem }: TechnicalCodeEditorProps) {
+export function TechnicalCodeEditor({ problem, onAllTestsPass }: TechnicalCodeEditorProps) {
   const [language, setLanguage] = useState<Language>("javascript");
   const [code, setCode] = useState<string>(problem.starterCode.javascript);
   const [output, setOutput] = useState<OutputEntry[]>([]);
@@ -161,9 +166,15 @@ export function TechnicalCodeEditor({ problem }: TechnicalCodeEditorProps) {
     }
 
     const execCode = language === "typescript" ? stripTypeAnnotations(code) : code;
-    const results = executeJavaScript(execCode);
+    const results = executeJavaScript(execCode, problem.testCases);
     setOutput(results);
     setShowOutput(true);
+
+    // If every result came back without errors, the solution works — notify parent
+    const allPassed = results.length > 0 && results.every((r) => r.type !== "error");
+    if (allPassed && onAllTestsPass) {
+      onAllTestsPass();
+    }
   }
 
   function handleRunTests() {

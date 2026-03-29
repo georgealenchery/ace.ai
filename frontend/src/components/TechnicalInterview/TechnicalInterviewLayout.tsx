@@ -166,7 +166,7 @@ export function TechnicalInterviewLayout() {
 
         {/* Right Panel — Code Editor */}
         <div className="backdrop-blur-lg bg-gray-900/80 rounded-2xl border border-white/10 shadow-xl overflow-hidden flex flex-col min-h-0">
-          <TechnicalCodeEditor problem={problem} />
+          <TechnicalCodeEditor problem={problem} onAllTestsPass={handleEnd} />
         </div>
       </div>
     </div>
