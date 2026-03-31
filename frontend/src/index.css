@@ -133,6 +133,9 @@
 
   html {
     font-size: var(--font-size);
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5f5 #f3f4f6;
   }
 
   h1 {
@@ -176,4 +179,39 @@
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
+}
+
+/* ── Global scrollbar styles ──────────────────────────────────────────────── */
+
+/* WebKit (Chrome, Edge, Safari) — applies to every scrollable element */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5f5;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a5b4fc;
+}
+
+/* Monaco editor — override its internal scrollable element */
+.monaco-scrollable-element > .scrollbar > .slider {
+  background: #cbd5f5 !important;
+  border-radius: 9999px !important;
+}
+
+.monaco-scrollable-element > .scrollbar > .slider:hover {
+  background: #a5b4fc !important;
+}
+
+.monaco-scrollable-element > .scrollbar {
+  background: #f3f4f6 !important;
 }
