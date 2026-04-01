@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion } from "motion/react";
 import { Mic, MicOff, X } from "lucide-react";
@@ -9,6 +9,7 @@ import {
   getStrictnessLabel,
 } from "../hooks/useVapiInterview";
 import type { VapiInterviewConfig } from "../hooks/useVapiInterview";
+import { vapi } from "../lib/vapi";
 
 const INTERVIEW_TIMER: Record<string, number> = {
   easy:   1200, // 20 minutes
@@ -60,6 +61,10 @@ export function VapiInterviewPanel() {
   const totalTime = INTERVIEW_TIMER[difficultyLabel] ?? 1500;
   const [timeLeft, setTimeLeft] = useState(totalTime);
 
+  // Refs that prevent each vapi.say() warning from firing more than once
+  const warned2MinRef = useRef(false);
+  const warned0MinRef = useRef(false);
+
   const interviewConfig: VapiInterviewConfig = {
     role,
     difficulty,
@@ -78,18 +83,43 @@ export function VapiInterviewPanel() {
     return () => clearTimeout(timer);
   }, [timeLeft, status]);
 
-  // Auto-end when time expires
+  // Timer warnings — vapi.say() at 2 min, then auto-end with goodbye at 0
   useEffect(() => {
-    if (timeLeft === 0 && status === "active") {
-      handleEnd();
-    }
-  }, [timeLeft]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (status !== "active") return;
 
-  const pct = totalTime > 0 ? timeLeft / totalTime : 1;
+    if (timeLeft === 120 && !warned2MinRef.current) {
+      warned2MinRef.current = true;
+      try {
+        vapi.say("We're running low on time. Let's wrap up with one final question.");
+      } catch {}
+    }
+
+    if (timeLeft === 0 && !warned0MinRef.current) {
+      warned0MinRef.current = true;
+      try {
+        vapi.say("That's all the time we have. Thanks for the interview. Let me put together your feedback.");
+      } catch {}
+      setTimeout(() => handleEnd(), 3000);
+    }
+  }, [timeLeft, status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Absolute-threshold colours + pulse when time is low
   const timerColor =
-    pct <= 0.1 ? "text-red-400" :
-    pct <= 0.3 ? "text-amber-400" :
+    timeLeft <= 120 ? "text-red-400 animate-pulse" :
+    timeLeft <= 300 ? "text-amber-400 animate-pulse" :
     "text-white";
+
+  const elapsed = totalTime - timeLeft;
+  const progressPct = totalTime > 0 ? Math.min((elapsed / totalTime) * 100, 100) : 0;
+
+  const bannerText =
+    timeLeft <= 120 && status === "active" ? "Under 2 minutes remaining" :
+    timeLeft <= 300 && status === "active" ? "5 minutes remaining" :
+    null;
+
+  const bannerColor = timeLeft <= 120
+    ? "bg-red-500/20 border-red-500/30 text-red-300"
+    : "bg-amber-500/20 border-amber-500/30 text-amber-300";
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -140,7 +170,7 @@ export function VapiInterviewPanel() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-3">
           <div>
             <h1 className="text-2xl font-bold">{roleLabel} Engineer Interview</h1>
             <p className="text-gray-400">Voice Assessment</p>
@@ -149,6 +179,21 @@ export function VapiInterviewPanel() {
             {formatTime(timeLeft)}
           </div>
         </div>
+
+        {/* Progress bar */}
+        <div className="mb-3 h-1 w-full bg-white/10 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-1000 rounded-full"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+
+        {/* Warning banner */}
+        {bannerText && (
+          <div className={`mb-4 px-4 py-2 rounded-lg border text-xs font-medium ${bannerColor}`}>
+            {bannerText}
+          </div>
+        )}
 
         {/* Settings Summary */}
         <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">

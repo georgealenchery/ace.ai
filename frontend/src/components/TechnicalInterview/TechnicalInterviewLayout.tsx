@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion } from "motion/react";
 import { Mic } from "lucide-react";
@@ -9,6 +9,7 @@ import { TechnicalCodeEditor } from "./TechnicalCodeEditor";
 import { useVapiTechnicalInterview } from "../../hooks/useVapiTechnicalInterview";
 import type { VapiTechnicalConfig } from "../../hooks/useVapiTechnicalInterview";
 import { generateInterviewQuestions } from "../../services/api";
+import { vapi } from "../../lib/vapi";
 import type { CodingProblem } from "../../services/api";
 
 const INTERVIEW_TIMER: Record<string, number> = {
@@ -96,6 +97,10 @@ export function TechnicalInterviewLayout() {
   const totalTime = INTERVIEW_TIMER[difficultyLabel] ?? 1500;
   const [timeLeft, setTimeLeft] = useState(totalTime);
 
+  // Refs that prevent each vapi.say() warning from firing more than once
+  const warned2MinRef = useRef(false);
+  const warned0MinRef = useRef(false);
+
   // Fetch AI-generated coding problems once on mount — do NOT regenerate mid-session
   useEffect(() => {
     setQuestionsLoading(true);
@@ -138,12 +143,25 @@ export function TechnicalInterviewLayout() {
     return () => clearTimeout(timer);
   }, [timeLeft, status]);
 
-  // Auto-end the interview when the countdown expires
+  // Timer warnings — vapi.say() at 2 min, then auto-end with goodbye at 0
   useEffect(() => {
-    if (timeLeft === 0 && status === "active") {
-      handleEnd();
+    if (status !== "active") return;
+
+    if (timeLeft === 120 && !warned2MinRef.current) {
+      warned2MinRef.current = true;
+      try {
+        vapi.say("We've got about two minutes left. Can you walk me through your current solution and explain your approach?");
+      } catch {}
     }
-  }, [timeLeft]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    if (timeLeft === 0 && !warned0MinRef.current) {
+      warned0MinRef.current = true;
+      try {
+        vapi.say("Time's up. Let's go over what you've got. Thanks for working through this.");
+      } catch {}
+      setTimeout(() => handleEnd(), 3000);
+    }
+  }, [timeLeft, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const analyzeAndNavigate = async () => {
     const result = await evaluateTranscript(messages, interviewConfig);
