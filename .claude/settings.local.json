@@ -17,7 +17,8 @@
       "Bash(timeout 45 npx vite build)",
       "Bash(npx vite:*)",
       "Bash(find /c/Users/jackb/Documents/ai-interviewer/node_modules/@vapi-ai/web -name *.d.ts -type f)",
-      "Bash(find /c/Users/jackb/Documents/ai-interviewer -type f -name *analytic* -o -name *evaluat*)"
+      "Bash(find /c/Users/jackb/Documents/ai-interviewer -type f -name *analytic* -o -name *evaluat*)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({**d.get\\(''''dependencies'''',{}\\), **d.get\\(''''devDependencies'''',{}\\)}, indent=2\\)\\)\")"
     ]
   }
 }

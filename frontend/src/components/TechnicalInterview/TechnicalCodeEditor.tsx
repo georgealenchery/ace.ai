@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
-import { Play, CheckCircle2, XCircle, Circle } from "lucide-react";
-import type { CodingProblem, TestCase } from "../../services/api";
+import { Play, CheckCircle2, XCircle, Circle, Loader2 } from "lucide-react";
+import type { CodingProblem } from "../../services/api";
+import { executeCode, preloadPyodide, isPyodideReady } from "../../hooks/useCodeExecution";
+import type { TestResult } from "../../hooks/useCodeExecution";
 
 // Monaco language identifier for each selectable language
 const LANGUAGE_MAP: Record<string, string> = {
@@ -25,15 +27,13 @@ const FILE_EXT_MAP: Record<string, string> = {
   "Bash":       "sh",
 };
 
-// Only these languages can be executed in the browser via new Function()
-const JS_EXECUTABLE = new Set(["JavaScript", "Node.js"]);
-
-type TestResult = {
-  passed: boolean;
-  actual: string;
-  expected: string;
-  error?: string;
-};
+function formatValue(val: string): string {
+  try {
+    return JSON.stringify(JSON.parse(val), null, 0);
+  } catch {
+    return val;
+  }
+}
 
 type TechnicalCodeEditorProps = {
   problem: CodingProblem | null;
@@ -43,37 +43,41 @@ type TechnicalCodeEditorProps = {
   onAllTestsPassed: (passed: boolean) => void;
 };
 
-function runTestCase(code: string, functionName: string, testCase: TestCase): TestResult {
-  const expected = JSON.stringify(testCase.expectedOutput);
-  try {
-    // eslint-disable-next-line no-new-func
-    const fn = new Function(`${code}; return ${functionName};`)() as (...args: unknown[]) => unknown;
-    const result = fn(...testCase.input);
-    const actual = JSON.stringify(result);
-    return { passed: actual === expected, actual, expected };
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    return { passed: false, actual: "Error", expected, error };
-  }
-}
-
-function formatValue(val: string): string {
-  try {
-    return JSON.stringify(JSON.parse(val), null, 0);
-  } catch {
-    return val;
-  }
-}
-
-export function TechnicalCodeEditor({ problem, questionIndex, language = "JavaScript", disabled = false, onAllTestsPassed }: TechnicalCodeEditorProps) {
+export function TechnicalCodeEditor({
+  problem,
+  questionIndex,
+  language = "JavaScript",
+  disabled = false,
+  onAllTestsPassed,
+}: TechnicalCodeEditorProps) {
   const [code, setCode] = useState<string>("");
   const [results, setResults] = useState<TestResult[] | null>(null);
   const [hasRun, setHasRun] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  // Track whether Pyodide is loading so we can show a hint
+  const [pyodideLoading, setPyodideLoading] = useState(false);
   const prevIndexRef = useRef(questionIndex);
 
   const monacoLanguage = LANGUAGE_MAP[language] ?? "javascript";
   const fileExt = FILE_EXT_MAP[language] ?? "js";
-  const canExecute = JS_EXECUTABLE.has(language);
+
+  // Pre-warm Pyodide as soon as Python is the selected language
+  useEffect(() => {
+    if (language === "Python" && !isPyodideReady()) {
+      setPyodideLoading(true);
+      preloadPyodide();
+      // Poll until ready (Pyodide can take 5-7s on first load)
+      const interval = setInterval(() => {
+        if (isPyodideReady()) {
+          setPyodideLoading(false);
+          clearInterval(interval);
+        }
+      }, 500);
+      return () => clearInterval(interval);
+    } else {
+      setPyodideLoading(false);
+    }
+  }, [language]);
 
   // Reset editor when question or language changes
   useEffect(() => {
@@ -82,28 +86,47 @@ export function TechnicalCodeEditor({ problem, questionIndex, language = "JavaSc
     }
     setResults(null);
     setHasRun(false);
+    setIsRunning(false);
     setCode(problem?.functionSignature ?? "");
-    // Non-JS languages can't be executed in the browser — the voice interviewer
-    // evaluates the solution verbally, so we unlock progression automatically.
-    onAllTestsPassed(!canExecute);
+    onAllTestsPassed(false);
   }, [questionIndex, problem, language]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Run tests in-browser (JS/Node.js only)
-  const handleRunTests = () => {
-    if (!problem || disabled) return;
-    const testResults = problem.testCases.map((tc) =>
-      runTestCase(code, problem.functionName, tc)
-    );
-    setResults(testResults);
-    setHasRun(true);
-    const allPassed = testResults.every((r) => r.passed);
-    console.log("Test results:", testResults);
-    onAllTestsPassed(allPassed);
+  const handleRunTests = async () => {
+    if (!problem || disabled || isRunning) return;
+    setIsRunning(true);
+    try {
+      const testResults = await executeCode(language, code, problem);
+      setResults(testResults);
+      setHasRun(true);
+      const allPassed = testResults.every((r) => r.passed);
+      console.log("Results:", testResults);
+      onAllTestsPassed(allPassed);
+    } catch (err) {
+      console.error("Execution failed:", err);
+      const errMsg = err instanceof Error ? err.message : "Execution failed";
+      const fallback: TestResult[] = problem.testCases.map((tc) => ({
+        passed: false,
+        actual: "Error",
+        expected: JSON.stringify(tc.expectedOutput),
+        error: errMsg,
+      }));
+      setResults(fallback);
+      setHasRun(true);
+      onAllTestsPassed(false);
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   const allPassed = hasRun && results?.every((r) => r.passed);
   const passCount = results?.filter((r) => r.passed).length ?? 0;
   const totalCount = problem?.testCases.length ?? 0;
+
+  const runButtonLabel = isRunning
+    ? "Running..."
+    : pyodideLoading && language === "Python"
+      ? "Loading Python..."
+      : "Run Tests";
 
   return (
     <div className="flex flex-col h-full">
@@ -116,7 +139,7 @@ export function TechnicalCodeEditor({ problem, questionIndex, language = "JavaSc
           <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white/10 text-gray-400">
             {language}
           </span>
-          {canExecute && hasRun && (
+          {hasRun && (
             <span className={allPassed ? "text-green-400" : "text-yellow-400"}>
               {passCount}/{totalCount} tests passed
             </span>
@@ -125,12 +148,15 @@ export function TechnicalCodeEditor({ problem, questionIndex, language = "JavaSc
 
         <button
           onClick={handleRunTests}
-          disabled={!problem || !canExecute || disabled}
+          disabled={!problem || disabled || isRunning || (pyodideLoading && language === "Python")}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-all"
-          title={!canExecute ? `${language} cannot be executed in the browser` : undefined}
         >
-          <Play className="w-3.5 h-3.5 fill-white" />
-          Run Tests
+          {isRunning || (pyodideLoading && language === "Python") ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Play className="w-3.5 h-3.5 fill-white" />
+          )}
+          {runButtonLabel}
         </button>
       </div>
 
@@ -163,44 +189,23 @@ export function TechnicalCodeEditor({ problem, questionIndex, language = "JavaSc
 
       {/* Test Results Panel */}
       <div className="dark-scrollbar shrink-0 border-t border-white/10 bg-gray-900/80 max-h-52 overflow-y-auto">
-        {/* Non-executable language: show test cases as reference only */}
-        {!canExecute && problem && (
-          <div className="divide-y divide-white/5">
-            <div className="px-4 py-2.5 text-xs text-gray-500 flex items-center gap-2">
-              <Circle className="w-3.5 h-3.5 shrink-0" />
-              {language} cannot run in the browser. Use these test cases to verify your solution — your interviewer will evaluate your approach.
-            </div>
-            {problem.testCases.map((tc, i) => (
-              <div key={i} className="px-4 py-2.5 text-xs">
-                <div className="flex items-center gap-2 mb-1">
-                  <Circle className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                  <span className="text-gray-400 font-semibold">Test {i + 1}</span>
-                  {tc.description && <span className="text-gray-500">— {tc.description}</span>}
-                </div>
-                <div className="ml-5 space-y-0.5 font-mono text-gray-400">
-                  <div>
-                    <span className="text-gray-500">input:&nbsp;&nbsp;&nbsp;</span>
-                    <span className="text-gray-200">{JSON.stringify(tc.input)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">expected: </span>
-                    <span className="text-gray-200">{JSON.stringify(tc.expectedOutput)}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+        {isRunning && (
+          <div className="px-4 py-3 text-xs text-gray-400 flex items-center gap-2">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Running code against test cases…
           </div>
         )}
 
-        {/* JS-executable: existing pass/fail results */}
-        {canExecute && !hasRun && (
+        {!isRunning && !hasRun && (
           <div className="px-4 py-3 text-xs text-gray-500 flex items-center gap-2">
             <Circle className="w-3.5 h-3.5" />
-            Run your code to see test results
+            {pyodideLoading && language === "Python"
+              ? "Loading Python runtime (one-time, ~5s)…"
+              : "Run your code to see test results"}
           </div>
         )}
 
-        {canExecute && hasRun && results && (
+        {!isRunning && hasRun && results && (
           <div className="divide-y divide-white/5">
             {results.map((result, i) => {
               const tc = problem?.testCases[i];
@@ -215,7 +220,11 @@ export function TechnicalCodeEditor({ problem, questionIndex, language = "JavaSc
                     ) : (
                       <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
                     )}
-                    <span className={result.passed ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>
+                    <span
+                      className={
+                        result.passed ? "text-green-400 font-semibold" : "text-red-400 font-semibold"
+                      }
+                    >
                       Test {i + 1}
                     </span>
                     {tc?.description && (
@@ -235,7 +244,9 @@ export function TechnicalCodeEditor({ problem, questionIndex, language = "JavaSc
                       <div>
                         <span className="text-gray-500">actual:&nbsp;&nbsp; </span>
                         <span className={result.error ? "text-red-300" : "text-yellow-300"}>
-                          {result.error ? `Error: ${result.error}` : formatValue(result.actual)}
+                          {result.error
+                            ? `Error: ${result.error}`
+                            : formatValue(result.actual)}
                         </span>
                       </div>
                     )}

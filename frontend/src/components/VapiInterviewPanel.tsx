@@ -10,10 +10,15 @@ import {
 } from "../hooks/useVapiInterview";
 import type { VapiInterviewConfig } from "../hooks/useVapiInterview";
 
+const INTERVIEW_TIMER: Record<string, number> = {
+  easy:   1200, // 20 minutes
+  medium: 1500, // 25 minutes
+  hard:   1800, // 30 minutes
+};
+
 export function VapiInterviewPanel() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [time, setTime] = useState(0);
 
   const {
     status,
@@ -51,6 +56,9 @@ export function VapiInterviewPanel() {
   const experienceLevel = state?.experienceLevel ?? 50;
   const strictness = state?.strictness ?? 50;
   const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
+  const difficultyLabel = difficulty <= 30 ? "easy" : difficulty <= 60 ? "medium" : "hard";
+  const totalTime = INTERVIEW_TIMER[difficultyLabel] ?? 1500;
+  const [timeLeft, setTimeLeft] = useState(totalTime);
 
   const interviewConfig: VapiInterviewConfig = {
     role,
@@ -61,12 +69,27 @@ export function VapiInterviewPanel() {
     interviewer,
   };
 
-  // Timer — runs while call is active
+  // Countdown — ticks once per second while call is active
   useEffect(() => {
-    if (status !== "active") return;
-    const timer = setInterval(() => setTime((t) => t + 1), 1000);
-    return () => clearInterval(timer);
-  }, [status]);
+    if (status !== "active" || timeLeft <= 0) return;
+    const timer = setTimeout(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [timeLeft, status]);
+
+  // Auto-end when time expires
+  useEffect(() => {
+    if (timeLeft === 0 && status === "active") {
+      handleEnd();
+    }
+  }, [timeLeft]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pct = totalTime > 0 ? timeLeft / totalTime : 1;
+  const timerColor =
+    pct <= 0.1 ? "text-red-400" :
+    pct <= 0.3 ? "text-amber-400" :
+    "text-white";
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -122,7 +145,9 @@ export function VapiInterviewPanel() {
             <h1 className="text-2xl font-bold">{roleLabel} Engineer Interview</h1>
             <p className="text-gray-400">Voice Assessment</p>
           </div>
-          <div className="text-3xl font-mono">{formatTime(time)}</div>
+          <div className={`text-3xl font-mono tabular-nums transition-colors duration-500 ${timerColor}`}>
+            {formatTime(timeLeft)}
+          </div>
         </div>
 
         {/* Settings Summary */}
