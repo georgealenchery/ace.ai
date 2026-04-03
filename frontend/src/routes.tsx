@@ -59,4 +59,9 @@ export const router = createBrowserRouter([
     path: "/interviews/:id",
     element: <ProtectedRoute><InterviewReplayPage /></ProtectedRoute>,
   },
+  // /replay — current interview from router state (no ID needed)
+  {
+    path: "/replay",
+    element: <ProtectedRoute><InterviewReplayPage /></ProtectedRoute>,
+  },
 ]);

@@ -2,15 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { MessageSquare } from "lucide-react";
 import type { TranscriptMessage, CallStatus } from "../../hooks/useVapiInterview";
+import { MicVisualizer } from "../MicVisualizer";
 
 type TechnicalChatPanelProps = {
   messages: TranscriptMessage[];
   status: CallStatus;
   isSpeaking: boolean;
   isListening: boolean;
+  volumeLevel: number;
 };
 
-export function TechnicalChatPanel({ messages, status, isSpeaking, isListening }: TechnicalChatPanelProps) {
+export function TechnicalChatPanel({ messages, status, isSpeaking, isListening, volumeLevel }: TechnicalChatPanelProps) {
   const [showTypeInput, setShowTypeInput] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +54,13 @@ export function TechnicalChatPanel({ messages, status, isSpeaking, isListening }
           <div className={`w-2 h-2 rounded-full ${statusDot}`} />
           <span className="text-xs font-medium text-gray-400">Live Conversation</span>
         </div>
-        <span className="text-[10px] font-medium text-gray-500">{statusLabel}</span>
+        <div className="flex items-center gap-3">
+          <MicVisualizer
+            volumeLevel={volumeLevel}
+            isListening={isListening}
+            isSpeaking={isSpeaking}
+          />
+        </div>
       </div>
 
       {/* Transcript */}

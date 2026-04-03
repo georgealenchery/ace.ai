@@ -5,6 +5,8 @@ import { Volume2, Loader2 } from "lucide-react";
 import * as Slider from "@radix-ui/react-slider";
 import { vapi } from "../lib/vapi";
 import { INTERVIEWERS, resolveVoice } from "../hooks/useVapiInterview";
+import { TOPIC_CATEGORIES } from "../data/technicalProblems";
+import { DashboardNavbar } from "./DashboardNavbar";
 
 const ROLE_LANGUAGES: Record<string, string[]> = {
   frontend:  ["JavaScript", "TypeScript"],
@@ -70,6 +72,7 @@ export function SetupDashboard() {
   const [interviewerStrictness, setInterviewerStrictness] = useState([50]);
   const [experienceLevel, setExperienceLevel] = useState([2]);
   const [selectedInterviewer, setSelectedInterviewer] = useState(0);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [previewingKey, setPreviewingKey] = useState<string | null>(null);
   const previewCleanupRef = useRef<(() => void) | null>(null);
 
@@ -158,13 +161,20 @@ export function SetupDashboard() {
     }
   }
 
+  const toggleTopic = (id: string) => {
+    setSelectedTopics((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100">
+      <DashboardNavbar activeTab="Practice Interviews" />
+      <div className="max-w-7xl mx-auto p-6">
         <motion.h1
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-3xl font-bold text-gray-900 mb-8"
+          className="text-3xl font-bold text-gray-900 mb-8 pt-2"
         >
           Configure Your Interview
         </motion.h1>
@@ -240,6 +250,48 @@ export function SetupDashboard() {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Topic Filter — only for technical interviews */}
+            {questionType === "technical" && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Focus Topics
+                  </label>
+                  <span className="text-xs text-gray-400">
+                    {selectedTopics.length === 0
+                      ? "All topics"
+                      : `${selectedTopics.length} selected`}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {TOPIC_CATEGORIES.map((topic) => {
+                    const active = selectedTopics.includes(topic.id);
+                    return (
+                      <button
+                        key={topic.id}
+                        onClick={() => toggleTopic(topic.id)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                          active
+                            ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-sm"
+                            : "bg-white/60 text-gray-600 border border-gray-200 hover:bg-white/80 hover:border-gray-300"
+                        }`}
+                      >
+                        {topic.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedTopics.length > 0 && (
+                  <button
+                    onClick={() => setSelectedTopics([])}
+                    className="mt-2 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    Clear selection
+                  </button>
+                )}
               </div>
             )}
 
@@ -433,6 +485,7 @@ export function SetupDashboard() {
                     // Intern→0, Entry→25, Junior→50, Senior→100
                     experienceLevel: [0, 25, 50, 100][experienceLevel[0]] ?? 50,
                     interviewer: interviewerAvatars[selectedInterviewer]!.name,
+                    selectedTopics: questionType === "technical" ? selectedTopics : [],
                   },
                 });
               }}

@@ -44,8 +44,10 @@ router.post("/evaluate", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Missing required config fields: role, questionType" });
     }
 
-    const result = await analyzeVapiTranscript(transcript, config);
-    const saved = await saveInterview(req.user!.id, config, result);
+    // Strip timestamps for AI analysis; pass full entries (with timestamps) to storage
+    const analysisTranscript = transcript.map(({ role, text }) => ({ role, text }));
+    const result = await analyzeVapiTranscript(analysisTranscript, config);
+    const saved = await saveInterview(req.user!.id, config, result, transcript);
 
     res.json({ id: saved.id, result });
   } catch (err) {
@@ -54,7 +56,7 @@ router.post("/evaluate", async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/analysis/history — return all past interview results
+// GET /api/analysis/history — return all past interview results (includes transcripts)
 router.get("/history", async (req: Request, res: Response) => {
   try {
     const interviews = await getInterviews(req.user!.id);

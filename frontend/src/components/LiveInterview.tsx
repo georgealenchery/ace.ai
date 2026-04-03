@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { RotateCcw, X, Send } from "lucide-react";
 import { useInterview } from "../hooks/useInterview";
 import type { InterviewConfig } from "../types/interview";
+import { DashboardNavbar } from "./DashboardNavbar";
 
 export function LiveInterview() {
   const navigate = useNavigate();
@@ -82,8 +83,9 @@ export function LiveInterview() {
   }));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+      <DashboardNavbar activeTab="Practice Interviews" variant="dark" compact />
+      <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>

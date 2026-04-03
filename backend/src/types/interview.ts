@@ -63,6 +63,7 @@ export type CodingProblem = {
 export type VapiTranscriptEntry = {
   role: "assistant" | "user";
   text: string;
+  timestamp?: number;
 };
 
 export type VapiInterviewConfig = {
@@ -98,4 +99,5 @@ export type SavedInterview = {
   questionType: string;
   config: VapiInterviewConfig;
   result: VapiAnalysisResult;
+  transcript?: VapiTranscriptEntry[];
 };

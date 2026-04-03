@@ -33,6 +33,12 @@ export interface VapiAnalysisResult {
   }>;
 }
 
+export interface TranscriptEntry {
+  role: "assistant" | "user";
+  text: string;
+  timestamp?: number;
+}
+
 export interface SavedInterview {
   id: string;
   date: string;
@@ -40,6 +46,7 @@ export interface SavedInterview {
   questionType: string;
   config: VapiInterviewConfig;
   result: VapiAnalysisResult;
+  transcript?: TranscriptEntry[];
 }
 
 export async function generateInterviewQuestions(
@@ -58,7 +65,7 @@ export async function generateInterviewQuestions(
 }
 
 export async function evaluateVapiInterview(
-  transcript: Array<{ role: string; text: string }>,
+  transcript: TranscriptEntry[],
   config: VapiInterviewConfig,
 ): Promise<{ id: string; result: VapiAnalysisResult }> {
   const res = await apiFetch("/analysis/evaluate", {
@@ -85,6 +92,7 @@ export interface ReplayInterview {
   date: string;
   config?: VapiInterviewConfig;
   result: VapiAnalysisResult;
+  transcript?: TranscriptEntry[];
 }
 
 export async function getInterviews(): Promise<ReplayInterview[]> {

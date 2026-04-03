@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { TrendingUp, TrendingDown, MessageSquare, Code, Lightbulb, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { TrendingUp, TrendingDown, MessageSquare, Code, Lightbulb, ChevronDown, ChevronUp, Play } from "lucide-react";
+import { DashboardNavbar } from "./DashboardNavbar";
 import { getInterviewHistory } from "../services/api";
 import type { VapiAnalysisResult, SavedInterview } from "../services/api";
 
@@ -13,6 +14,7 @@ export function AnalyticsDashboard() {
   const state = location.state as {
     result?: VapiAnalysisResult | null;
     config?: { role?: string; questionType?: string };
+    interviewId?: string | null;
   } | null;
 
   const [history, setHistory] = useState<SavedInterview[]>([]);
@@ -105,21 +107,15 @@ export function AnalyticsDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100">
+      <DashboardNavbar activeTab="Analytics" />
+      <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <button
-              onClick={() => navigate("/")}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Home</span>
-            </button>
             <h1 className="text-3xl font-bold text-gray-900">Performance Analytics</h1>
             <p className="text-gray-600">Track your interview progress and improvement</p>
           </motion.div>
@@ -138,6 +134,15 @@ export function AnalyticsDashboard() {
                 {result.score}%
               </div>
               <p className="text-gray-600 mt-2">Interview Complete</p>
+              {state?.interviewId && (
+                <button
+                  onClick={() => navigate(`/interviews/${state.interviewId}`)}
+                  className="mt-3 flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors"
+                >
+                  <Play className="w-4 h-4" />
+                  View Full Replay
+                </button>
+              )}
             </div>
             {scoreChange != null && (
               <div className={`flex items-center gap-2 ${scoreChange >= 0 ? "text-green-600" : "text-red-500"}`}>
@@ -327,27 +332,36 @@ export function AnalyticsDashboard() {
                         const r = entry.result;
                         return (
                           <div key={entry.id} className="rounded-xl overflow-hidden">
-                            <button
-                              onClick={() => setExpandedId(isExpanded ? null : entry.id)}
-                              className="w-full flex items-center justify-between p-4 bg-white/50 hover:bg-white/70 transition-colors rounded-xl"
-                            >
-                              <div className="text-left">
-                                <p className="font-medium text-gray-900">
-                                  {entry.role.charAt(0).toUpperCase() + entry.role.slice(1)}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  {new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} &bull; {entry.questionType.charAt(0).toUpperCase() + entry.questionType.slice(1)}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-2xl font-bold text-blue-600">{r.score}%</span>
-                                {isExpanded ? (
-                                  <ChevronUp className="w-4 h-4 text-gray-400" />
-                                ) : (
-                                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                                )}
-                              </div>
-                            </button>
+                            <div className="flex items-center bg-white/50 hover:bg-white/70 transition-colors rounded-xl overflow-hidden">
+                              <button
+                                onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                                className="flex-1 flex items-center justify-between p-4"
+                              >
+                                <div className="text-left">
+                                  <p className="font-medium text-gray-900">
+                                    {entry.role.charAt(0).toUpperCase() + entry.role.slice(1)}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} &bull; {entry.questionType.charAt(0).toUpperCase() + entry.questionType.slice(1)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-2xl font-bold text-blue-600">{r.score}%</span>
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-4 h-4 text-gray-400" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                                  )}
+                                </div>
+                              </button>
+                              <button
+                                onClick={() => navigate(`/interviews/${entry.id}`)}
+                                title="View replay"
+                                className="px-3 py-2 text-purple-500 hover:text-purple-700 hover:bg-purple-50 transition-colors border-l border-white/50"
+                              >
+                                <Play className="w-4 h-4" />
+                              </button>
+                            </div>
 
                             <AnimatePresence>
                               {isExpanded && (

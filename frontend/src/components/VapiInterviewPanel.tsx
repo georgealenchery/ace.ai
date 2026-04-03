@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion } from "motion/react";
 import { Mic, MicOff, X } from "lucide-react";
@@ -10,6 +10,10 @@ import {
 } from "../hooks/useVapiInterview";
 import type { VapiInterviewConfig } from "../hooks/useVapiInterview";
 import { vapi } from "../lib/vapi";
+import { MicVisualizer } from "./MicVisualizer";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp";
+import { DashboardNavbar } from "./DashboardNavbar";
 
 const INTERVIEW_TIMER: Record<string, number> = {
   easy:   1200, // 20 minutes
@@ -26,6 +30,7 @@ export function VapiInterviewPanel() {
     isSpeaking,
     isListening,
     isMuted,
+    volumeLevel,
     messages,
     isAnalyzing,
     callEndedNaturally,
@@ -128,8 +133,14 @@ export function VapiInterviewPanel() {
   };
 
   const analyzeAndNavigate = async () => {
-    const result = await evaluateTranscript(messages, interviewConfig);
-    navigate("/analytics", { state: { result, config: interviewConfig } });
+    const evaluation = await evaluateTranscript(messages, interviewConfig);
+    navigate("/analytics", {
+      state: {
+        result: evaluation?.result ?? null,
+        config: interviewConfig,
+        interviewId: evaluation?.id ?? null,
+      },
+    });
   };
 
   const handleEnd = () => {
@@ -147,6 +158,38 @@ export function VapiInterviewPanel() {
       analyzeAndNavigate();
     }
   }, [callEndedNaturally]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const shortcuts = useMemo(() => ({
+    "ctrl+enter": {
+      handler: () => start(interviewConfig),
+      description: "Start interview",
+      label: "Ctrl+Enter",
+      enabled: status === "idle" || status === "ended",
+    },
+    "escape": {
+      handler: () => {
+        if (status === "active" && window.confirm("End the interview?")) handleEnd();
+      },
+      description: "End interview",
+      label: "Esc",
+      enabled: status === "active",
+    },
+    "m": {
+      handler: () => toggleMute(),
+      description: "Toggle mute",
+      label: "M",
+      enabled: status === "active",
+    },
+    "ctrl+shift+m": {
+      handler: () => toggleMute(),
+      description: "Toggle mute (global)",
+      label: "Ctrl+Shift+M",
+      enabled: status === "active",
+      allowInInput: true,
+    },
+  }), [status, interviewConfig, toggleMute]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useKeyboardShortcuts(shortcuts);
 
   const statusLabel = isAnalyzing
     ? "Analyzing your interview…"
@@ -167,8 +210,9 @@ export function VapiInterviewPanel() {
       : status === "connecting" ? "#3b82f6" : "#9ca3af";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+      <DashboardNavbar activeTab="Practice Interviews" variant="dark" compact />
+      <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-3">
           <div>
@@ -210,7 +254,12 @@ export function VapiInterviewPanel() {
             className="w-3 h-3 rounded-full animate-pulse"
             style={{ backgroundColor: statusColor }}
           />
-          <span className="text-sm font-medium text-gray-300">{statusLabel}</span>
+          <span className="text-sm font-medium text-gray-300 flex-1">{statusLabel}</span>
+          <MicVisualizer
+            volumeLevel={volumeLevel}
+            isListening={isListening}
+            isSpeaking={isSpeaking}
+          />
         </div>
 
         {/* Interview Area */}
@@ -308,6 +357,9 @@ export function VapiInterviewPanel() {
             ))}
           </div>
         </motion.div>
+
+        {/* Keyboard shortcuts help */}
+        <KeyboardShortcutsHelp shortcuts={shortcuts} />
 
         {/* Controls */}
         <div className="flex justify-center gap-4">

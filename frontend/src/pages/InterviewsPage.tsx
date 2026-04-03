@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { ChevronRight, Calendar, Mic, Code2, Inbox } from "lucide-react";
 import { getInterviews } from "../services/api";
 import type { ReplayInterview } from "../services/api";
+import { DashboardNavbar } from "../components/DashboardNavbar";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -33,8 +34,9 @@ export function InterviewsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 p-6">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100">
+      <DashboardNavbar activeTab="Interviews" />
+      <div className="max-w-3xl mx-auto p-6">
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}

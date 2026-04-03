@@ -27,6 +27,7 @@ export interface VapiTechnicalConfig {
   questions: string[];
   level: string;
   interviewer?: string;
+  selectedTopics?: string[];
 }
 
 function buildTechnicalSystemPrompt(config: VapiTechnicalConfig): string {
@@ -70,6 +71,36 @@ Do not let vague or incomplete answers slide. Always follow up with "can you be 
 
   const questionList = config.questions.map((q, i) => `${i + 1}. ${q}`).join("\n");
 
+  // Build topic focus instructions
+  const topics = config.selectedTopics ?? [];
+  const hasSystemDesign = topics.includes("system-design");
+  const codeTopics = topics.filter((t) => t !== "system-design");
+
+  const topicLabels: Record<string, string> = {
+    "arrays":              "Arrays & Strings",
+    "hash-maps":           "Hash Maps",
+    "linked-lists":        "Linked Lists",
+    "trees":               "Trees & Graphs",
+    "dynamic-programming": "Dynamic Programming",
+    "sorting":             "Sorting & Searching",
+    "stacks-queues":       "Stacks & Queues",
+    "recursion":           "Recursion & Backtracking",
+    "math":                "Math & Logic",
+    "system-design":       "System Design",
+  };
+
+  let topicInstructions = "";
+  if (topics.length > 0) {
+    const topicNames = topics.map((t) => topicLabels[t] ?? t).join(", ");
+    topicInstructions = `
+TOPIC FOCUS:
+The candidate has chosen to practice: ${topicNames}.
+When asking about time and space complexity, frame your follow-ups around these specific topics.
+When you ask "what are the tradeoffs?" or "is there a better approach?", guide the candidate toward solutions that use ${topicNames} concepts.
+${codeTopics.length > 0 ? `For the coding problems, probe whether they considered ${codeTopics.map((t) => topicLabels[t] ?? t).join(", ")} based approaches.` : ""}
+${hasSystemDesign ? `This session includes System Design. After each coding question, ask at least one architecture or design follow-up. For example: "How would you scale this to handle millions of requests?" or "What would change if you had to persist this data across restarts?"` : ""}`;
+  }
+
   return `You are a senior ${roleLabel} engineering interviewer conducting a ${config.level}-level ${config.difficulty <= 30 ? "easy" : config.difficulty <= 60 ? "medium" : "hard"} technical discussion interview.
 
 INTERVIEW QUESTIONS:
@@ -88,6 +119,7 @@ You are the interviewer. Do not let the candidate turn the conversation around.
 STRICT ENGINEERING FOCUS:
 Keep the conversation on technical topics related to the questions.
 If they go off topic, redirect them with "Let's bring that back to the question."
+${topicInstructions}
 
 ${difficultyInstructions}
 
@@ -118,6 +150,7 @@ export function useVapiTechnicalInterview() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [volumeLevel, setVolumeLevel] = useState(0);
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [callEndedNaturally, setCallEndedNaturally] = useState(false);
@@ -170,12 +203,15 @@ export function useVapiTechnicalInterview() {
       }
     };
 
+    const onVolumeLevel = (level: number) => setVolumeLevel(level);
+
     vapi.on("call-start", onCallStart);
     vapi.on("call-end", onCallEnd);
     vapi.on("speech-start", onSpeechStart);
     vapi.on("speech-end", onSpeechEnd);
     vapi.on("message", onMessage);
     vapi.on("error", onError);
+    vapi.on("volume-level", onVolumeLevel);
 
     return () => {
       vapi.removeListener("call-start", onCallStart);
@@ -184,28 +220,28 @@ export function useVapiTechnicalInterview() {
       vapi.removeListener("speech-end", onSpeechEnd);
       vapi.removeListener("message", onMessage);
       vapi.removeListener("error", onError);
+      vapi.removeListener("volume-level", onVolumeLevel);
     };
   }, []);
 
   const evaluateTranscript = async (
     transcript: TranscriptMessage[],
     config: VapiTechnicalConfig,
-  ): Promise<VapiAnalysisResult | null> => {
+  ): Promise<{ result: VapiAnalysisResult; id: string } | null> => {
     if (transcript.length < 2) {
       console.warn("Not enough messages to evaluate");
       return null;
     }
     setIsAnalyzing(true);
     try {
-      const formatted = transcript.map(({ role, text }) => ({ role, text }));
-      const { result } = await evaluateVapiInterview(formatted, {
+      const { result, id } = await evaluateVapiInterview(transcript, {
         role: config.role,
         difficulty: config.difficulty,
         experienceLevel: config.experienceLevel,
         strictness: config.strictness,
         questionType: config.questionType,
       });
-      return result;
+      return { result, id };
     } catch (err) {
       console.error("Failed to evaluate transcript:", err);
       return null;
@@ -277,6 +313,7 @@ export function useVapiTechnicalInterview() {
     isSpeaking,
     isListening,
     isMuted,
+    volumeLevel,
     messages,
     isAnalyzing,
     callEndedNaturally,

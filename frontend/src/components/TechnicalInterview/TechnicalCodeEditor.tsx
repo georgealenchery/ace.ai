@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Editor from "@monaco-editor/react";
 import { Play, CheckCircle2, XCircle, Circle, Loader2 } from "lucide-react";
 import type { CodingProblem } from "../../services/api";
@@ -41,6 +41,7 @@ type TechnicalCodeEditorProps = {
   language?: string;
   disabled?: boolean;
   onAllTestsPassed: (passed: boolean) => void;
+  onRunRef?: React.MutableRefObject<(() => void) | null>;
 };
 
 export function TechnicalCodeEditor({
@@ -49,6 +50,7 @@ export function TechnicalCodeEditor({
   language = "JavaScript",
   disabled = false,
   onAllTestsPassed,
+  onRunRef,
 }: TechnicalCodeEditorProps) {
   const [code, setCode] = useState<string>("");
   const [results, setResults] = useState<TestResult[] | null>(null);
@@ -91,7 +93,7 @@ export function TechnicalCodeEditor({
     onAllTestsPassed(false);
   }, [questionIndex, problem, language]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleRunTests = async () => {
+  const handleRunTests = useCallback(async () => {
     if (!problem || disabled || isRunning) return;
     setIsRunning(true);
     try {
@@ -116,7 +118,12 @@ export function TechnicalCodeEditor({
     } finally {
       setIsRunning(false);
     }
-  };
+  }, [problem, disabled, isRunning, language, code, onAllTestsPassed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Expose run function to parent via ref
+  useEffect(() => {
+    if (onRunRef) onRunRef.current = handleRunTests;
+  }, [onRunRef, handleRunTests]);
 
   const allPassed = hasRun && results?.every((r) => r.passed);
   const passCount = results?.filter((r) => r.passed).length ?? 0;

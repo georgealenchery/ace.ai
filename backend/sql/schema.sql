@@ -37,3 +37,6 @@ CREATE TABLE IF NOT EXISTS interviews (
 
 CREATE INDEX IF NOT EXISTS idx_interviews_user_id ON interviews(user_id);
 CREATE INDEX IF NOT EXISTS idx_interviews_date    ON interviews(date DESC);
+
+-- Migration: add transcript column if it doesn't exist yet
+ALTER TABLE interviews ADD COLUMN IF NOT EXISTS transcript JSONB NOT NULL DEFAULT '[]'::jsonb;

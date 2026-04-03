@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Code, Database, Brain, Shield, Smartphone, Globe, Cloud, Cpu } from "lucide-react";
+import { DashboardNavbar } from "./DashboardNavbar";
 
 const roles = [
   {
@@ -57,8 +58,9 @@ export function RoleSelection() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-12 px-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100">
+      <DashboardNavbar activeTab="Practice Interviews" />
+      <div className="max-w-6xl mx-auto py-12 px-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}

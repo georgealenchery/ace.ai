@@ -11,7 +11,6 @@ import analysisRoutes from "./routes/analysis";
 import authRoutes from "./routes/auth";
 import { authMiddleware } from "./middleware/auth";
 import { validateEnv } from "./config";
-import { initDb } from "./db";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -20,7 +19,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (_req, res) => {
-    res.send("Hello, AI Interviewer!");
+  res.send("Hello, AI Interviewer!");
 });
 
 // Public routes
@@ -36,7 +35,6 @@ app.use("/api", authMiddleware, interviewRoutes);
 async function start() {
   try {
     validateEnv();
-    await initDb();
     app.listen(PORT, () => {
       console.log(`[Server] Running on http://localhost:${PORT}`);
     });

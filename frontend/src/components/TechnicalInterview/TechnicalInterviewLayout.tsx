@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { motion } from "motion/react";
 import { Mic } from "lucide-react";
@@ -11,6 +11,10 @@ import type { VapiTechnicalConfig } from "../../hooks/useVapiTechnicalInterview"
 import { generateInterviewQuestions } from "../../services/api";
 import { vapi } from "../../lib/vapi";
 import type { CodingProblem } from "../../services/api";
+import { pickRandomProblems, toCodingProblem } from "../../data/technicalProblems";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
+import { KeyboardShortcutsHelp } from "../KeyboardShortcutsHelp";
+import { DashboardNavbar } from "../DashboardNavbar";
 
 const INTERVIEW_TIMER: Record<string, number> = {
   easy:   1200, // 20 minutes
@@ -59,12 +63,15 @@ export function TechnicalInterviewLayout() {
   const [questionsLoading, setQuestionsLoading] = useState(true);
   // Track which problems have all tests passing
   const [passed, setPassed] = useState<boolean[]>([false, false, false]);
+  // Ref passed to TechnicalCodeEditor so keyboard shortcuts can trigger run
+  const runTestsRef = useRef<(() => void) | null>(null);
 
   const {
     status,
     isSpeaking,
     isListening,
     isMuted,
+    volumeLevel,
     messages,
     isAnalyzing,
     callEndedNaturally,
@@ -89,6 +96,7 @@ export function TechnicalInterviewLayout() {
   const interviewer = state?.interviewer;
   const difficultyValue = state?.difficulty ?? 50;
   const experienceLevelValue = state?.experienceLevel ?? 50;
+  const selectedTopics: string[] = (state as { selectedTopics?: string[] } | null)?.selectedTopics ?? [];
 
   const difficultyLabel = difficultyValue <= 30 ? "easy" : difficultyValue <= 60 ? "medium" : "hard";
   const difficultyDisplay = difficultyLabel.charAt(0).toUpperCase() + difficultyLabel.slice(1);
@@ -101,21 +109,33 @@ export function TechnicalInterviewLayout() {
   const warned2MinRef = useRef(false);
   const warned0MinRef = useRef(false);
 
-  // Fetch AI-generated coding problems once on mount — do NOT regenerate mid-session
+  // Load coding problems once on mount — do NOT regenerate mid-session
   useEffect(() => {
     setQuestionsLoading(true);
-    console.log("Role:", role);
-    console.log("Language:", language);
-    generateInterviewQuestions(role, difficultyLabel, level, language)
-      .then((ps) => {
-        console.log("Generated coding problems:", ps);
-        setProblems(ps);
-      })
-      .catch(() => {
-        console.warn("Failed to generate problems, using fallback");
-        setProblems(FALLBACK_PROBLEMS);
-      })
-      .finally(() => setQuestionsLoading(false));
+
+    if (selectedTopics.length > 0) {
+      // Use local topic-filtered problem bank
+      const picked = pickRandomProblems(difficultyValue, selectedTopics, 3);
+      const codingProblems = picked.length > 0
+        ? picked.map((p) => toCodingProblem(p, language))
+        : FALLBACK_PROBLEMS;
+      console.log("Topic-filtered problems:", codingProblems.map((p) => p.functionName));
+      setProblems(codingProblems);
+      setQuestionsLoading(false);
+    } else {
+      // No topics — generate via AI
+      console.log("Role:", role, "Language:", language);
+      generateInterviewQuestions(role, difficultyLabel, level, language)
+        .then((ps) => {
+          console.log("AI-generated coding problems:", ps);
+          setProblems(ps);
+        })
+        .catch(() => {
+          console.warn("Failed to generate problems, using fallback");
+          setProblems(FALLBACK_PROBLEMS);
+        })
+        .finally(() => setQuestionsLoading(false));
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const interviewConfig: VapiTechnicalConfig = {
@@ -128,6 +148,7 @@ export function TechnicalInterviewLayout() {
     questions: problems.map((p) => p.prompt),
     level,
     interviewer,
+    selectedTopics,
   };
 
   const handleStart = () => {
@@ -164,8 +185,14 @@ export function TechnicalInterviewLayout() {
   }, [timeLeft, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const analyzeAndNavigate = async () => {
-    const result = await evaluateTranscript(messages, interviewConfig);
-    navigate("/analytics", { state: { result, config: interviewConfig } });
+    const evaluation = await evaluateTranscript(messages, interviewConfig);
+    navigate("/analytics", {
+      state: {
+        result: evaluation?.result ?? null,
+        config: interviewConfig,
+        interviewId: evaluation?.id ?? null,
+      },
+    });
   };
 
   const handleEnd = () => {
@@ -183,6 +210,54 @@ export function TechnicalInterviewLayout() {
       analyzeAndNavigate();
     }
   }, [callEndedNaturally]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isEditorFocused = () => {
+    const el = document.activeElement;
+    if (!el) return false;
+    // Monaco renders into a div with role="code" or a textarea
+    return el.closest(".monaco-editor") !== null || (el as HTMLElement).tagName === "TEXTAREA";
+  };
+
+  const shortcuts = useMemo(() => ({
+    "ctrl+enter": {
+      handler: () => runTestsRef.current?.(),
+      description: "Run tests",
+      label: "Ctrl+Enter",
+      enabled: status === "active",
+    },
+    "ctrl+shift+enter": {
+      handler: () => runTestsRef.current?.(),
+      description: "Run tests (alternate)",
+      label: "Ctrl+Shift+Enter",
+      enabled: status === "active",
+    },
+    "escape": {
+      handler: () => {
+        if (status === "active" && window.confirm("End the interview?")) handleEnd();
+      },
+      description: "End interview",
+      label: "Esc",
+      enabled: status === "active",
+    },
+    "m": {
+      handler: () => {
+        if (isEditorFocused()) return;
+        toggleMute();
+      },
+      description: "Toggle mute (when editor not focused)",
+      label: "M",
+      enabled: status === "active",
+    },
+    "ctrl+shift+m": {
+      handler: () => toggleMute(),
+      description: "Toggle mute (global)",
+      label: "Ctrl+Shift+M",
+      enabled: status === "active",
+      allowInInput: true,
+    },
+  }), [status, toggleMute]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useKeyboardShortcuts(shortcuts);
 
   const handleTestResults = (allPassed: boolean) => {
     setPassed((prev) => {
@@ -205,10 +280,13 @@ export function TechnicalInterviewLayout() {
   // Analyzing overlay
   if (isAnalyzing) {
     return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col items-center justify-center">
-        <div className="w-12 h-12 border-4 border-purple-400 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-lg font-medium text-gray-300">Analyzing your interview...</p>
-        <p className="text-sm text-gray-500 mt-2">This may take a moment</p>
+      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col">
+        <DashboardNavbar activeTab="Practice Interviews" variant="dark" compact />
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="w-12 h-12 border-4 border-purple-400 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-lg font-medium text-gray-300">Analyzing your interview...</p>
+          <p className="text-sm text-gray-500 mt-2">This may take a moment</p>
+        </div>
       </div>
     );
   }
@@ -216,10 +294,17 @@ export function TechnicalInterviewLayout() {
   // Ready screen — user must click to grant mic/audio permissions
   if (status === "idle") {
     return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col items-center justify-center">
+      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col">
+        <DashboardNavbar activeTab="Practice Interviews" variant="dark" compact />
+        <div className="flex-1 flex flex-col items-center justify-center">
         <div className="text-center max-w-md">
           <h1 className="text-2xl font-bold mb-2">Technical Interview</h1>
           <p className="text-gray-400 mb-2 capitalize">{role} · {difficultyDisplay} · {level} · {language}</p>
+          {selectedTopics.length > 0 && (
+            <p className="text-xs text-purple-400 mb-2">
+              Topics: {selectedTopics.join(", ")}
+            </p>
+          )}
           <p className="text-sm text-gray-500 mb-8">
             {questionsLoading
               ? "Preparing your coding problems..."
@@ -239,6 +324,7 @@ export function TechnicalInterviewLayout() {
             </motion.button>
           )}
         </div>
+        </div>
       </div>
     );
   }
@@ -246,9 +332,12 @@ export function TechnicalInterviewLayout() {
   // Connecting overlay
   if (status === "connecting") {
     return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col items-center justify-center">
-        <div className="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-lg font-medium text-gray-300">Connecting to interviewer...</p>
+      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col">
+        <DashboardNavbar activeTab="Practice Interviews" variant="dark" compact />
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-lg font-medium text-gray-300">Connecting to interviewer...</p>
+        </div>
       </div>
     );
   }
@@ -257,7 +346,9 @@ export function TechnicalInterviewLayout() {
   const nextLocked = !passed[currentQuestion];
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col p-4 overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col overflow-hidden">
+      <DashboardNavbar activeTab="Practice Interviews" variant="dark" compact />
+      <div className="flex-1 flex flex-col p-4 min-h-0">
       {/* Toolbar */}
       <TechnicalToolbar
         role={role}
@@ -291,6 +382,7 @@ export function TechnicalInterviewLayout() {
               status={status}
               isSpeaking={isSpeaking}
               isListening={isListening}
+              volumeLevel={volumeLevel}
             />
           </div>
         </div>
@@ -302,9 +394,12 @@ export function TechnicalInterviewLayout() {
             questionIndex={currentQuestion}
             language={language}
             onAllTestsPassed={handleTestResults}
+            onRunRef={runTestsRef}
           />
         </div>
       </div>
+      </div>
+      <KeyboardShortcutsHelp shortcuts={shortcuts} />
     </div>
   );
 }

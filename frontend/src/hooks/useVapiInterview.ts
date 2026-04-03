@@ -220,6 +220,7 @@ export function useVapiInterview() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [volumeLevel, setVolumeLevel] = useState(0);
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [callEndedNaturally, setCallEndedNaturally] = useState(false);
@@ -274,12 +275,15 @@ export function useVapiInterview() {
       }
     };
 
+    const onVolumeLevel = (level: number) => setVolumeLevel(level);
+
     vapi.on("call-start", onCallStart);
     vapi.on("call-end", onCallEnd);
     vapi.on("speech-start", onSpeechStart);
     vapi.on("speech-end", onSpeechEnd);
     vapi.on("message", onMessage);
     vapi.on("error", onError);
+    vapi.on("volume-level", onVolumeLevel);
 
     return () => {
       vapi.removeListener("call-start", onCallStart);
@@ -288,22 +292,22 @@ export function useVapiInterview() {
       vapi.removeListener("speech-end", onSpeechEnd);
       vapi.removeListener("message", onMessage);
       vapi.removeListener("error", onError);
+      vapi.removeListener("volume-level", onVolumeLevel);
     };
   }, []);
 
   const evaluateTranscript = async (
     transcript: TranscriptMessage[],
     config: VapiInterviewConfig,
-  ): Promise<VapiAnalysisResult | null> => {
+  ): Promise<{ result: VapiAnalysisResult; id: string } | null> => {
     if (transcript.length < 2) {
       console.warn("Not enough messages to evaluate");
       return null;
     }
     setIsAnalyzing(true);
     try {
-      const formatted = transcript.map(({ role, text }) => ({ role, text }));
-      const { result } = await evaluateVapiInterview(formatted, config);
-      return result;
+      const { result, id } = await evaluateVapiInterview(transcript, config);
+      return { result, id };
     } catch (err) {
       console.error("Failed to evaluate transcript:", err);
       return null;
@@ -377,6 +381,7 @@ export function useVapiInterview() {
     isSpeaking,
     isListening,
     isMuted,
+    volumeLevel,
     messages,
     isAnalyzing,
     callEndedNaturally,
