@@ -18,7 +18,12 @@
       "Bash(npx vite:*)",
       "Bash(find /c/Users/jackb/Documents/ai-interviewer/node_modules/@vapi-ai/web -name *.d.ts -type f)",
       "Bash(find /c/Users/jackb/Documents/ai-interviewer -type f -name *analytic* -o -name *evaluat*)",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({**d.get\\(''''dependencies'''',{}\\), **d.get\\(''''devDependencies'''',{}\\)}, indent=2\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({**d.get\\(''''dependencies'''',{}\\), **d.get\\(''''devDependencies'''',{}\\)}, indent=2\\)\\)\")",
+      "Bash(npm test:*)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(echo \"FE_EXIT:$?\")",
+      "Bash(echo \"BE_EXIT:$?\")",
+      "Bash(npx vitest:*)"
     ]
   },
   "enabledPlugins": {

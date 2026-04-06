@@ -27,7 +27,8 @@ function comboFromEvent(e: KeyboardEvent): string {
 function isTypingTarget(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
   const tag = el.tagName.toLowerCase();
-  return tag === "input" || tag === "textarea" || el.isContentEditable;
+  const ce = el.getAttribute("contenteditable");
+  return tag === "input" || tag === "textarea" || el.isContentEditable || (ce !== null && ce !== "false");
 }
 
 export function useKeyboardShortcuts(shortcuts: ShortcutsMap) {

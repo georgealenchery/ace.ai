@@ -47,7 +47,7 @@ export const TECHNICAL_PROBLEMS: TechnicalProblem[] = [
     id: "reverse-string",
     title: "Reverse a String",
     difficulty: "Easy",
-    topics: ["arrays", "strings"],
+    topics: ["arrays"],
     description:
       "Write a function that takes a string and returns it reversed.",
     examples: [
@@ -149,7 +149,7 @@ export const TECHNICAL_PROBLEMS: TechnicalProblem[] = [
     id: "valid-palindrome",
     title: "Valid Palindrome",
     difficulty: "Easy",
-    topics: ["strings", "arrays"],
+    topics: ["arrays"],
     description:
       "A phrase is a palindrome if, after converting all uppercase letters to lowercase and removing all non-alphanumeric characters, it reads the same forward and backward. Given a string s, return true if it is a palindrome, false otherwise.",
     examples: [
@@ -385,7 +385,7 @@ function reverseList(list) {
     id: "group-anagrams",
     title: "Group Anagrams",
     difficulty: "Medium",
-    topics: ["hash-maps", "strings", "sorting"],
+    topics: ["hash-maps", "sorting"],
     description:
       "Given an array of strings, group the anagrams together. Return the total number of groups.",
     examples: [
@@ -453,7 +453,7 @@ function groupAnagramsCount(strs) {
     id: "longest-substring",
     title: "Longest Substring Without Repeating Characters",
     difficulty: "Medium",
-    topics: ["strings", "hash-maps"],
+    topics: ["arrays", "hash-maps"],
     description:
       "Given a string s, find the length of the longest substring without repeating characters.",
     examples: [
@@ -680,7 +680,7 @@ function lruCacheOps(capacity, ops, vals) {
     id: "longest-common-subsequence",
     title: "Longest Common Subsequence",
     difficulty: "Hard",
-    topics: ["dynamic-programming", "strings", "recursion"],
+    topics: ["dynamic-programming", "recursion"],
     description:
       "Given two strings text1 and text2, return the length of their longest common subsequence. A subsequence is a sequence that appears in the same relative order but not necessarily contiguously.",
     examples: [

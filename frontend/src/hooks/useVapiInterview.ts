@@ -260,7 +260,8 @@ export function useVapiInterview() {
       console.error("Vapi error:", e);
     };
 
-    const onMessage = (msg: VapiTranscriptMessage) => {
+    const onMessage = (msg: VapiTranscriptMessage | null) => {
+      if (!msg) return;
       if (msg.type === "transcript" && msg.transcriptType === "final") {
         const newMsg: TranscriptMessage = {
           role: msg.role,
