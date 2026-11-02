@@ -1,5 +1,5 @@
 Welcome to Ace.AI!
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/loren1204/ace.ai/badge)](https://scorecard.dev/viewer/?uri=github.com/loren1204/ace.ai)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/georgealenchery/ace.ai/badge)](https://scorecard.dev/viewer/?uri=github.com/georgealenchery/ace.ai)
 
 “Ace” your interviews with an AI-powered voice simulation.
 
